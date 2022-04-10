@@ -1,93 +1,60 @@
-/*
- * SPDX-License-Identifier: Apache-2.0
- */
 
 package org.hyperledger.fabric.samples.assettransfer;
 
 import java.util.HashMap;
 import java.util.Objects;
 
+import lombok.*;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
 
-import com.owlike.genson.annotation.JsonProperty;
-
 @DataType()
+@ToString
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public final class Asset {
 
     @Property()
-    private final String assetID;
+    private String assetID;
 
     @Property()
-    private final String color;
+    private String owner;
 
     @Property()
-    private final int size;
+    private HashMap<String, String> coin;
 
     @Property()
-    private final String owner;
+    private String sender;
 
     @Property()
-    private final int appraisedValue;
+    private String receiver;
 
     @Property()
-    private final HashMap<String, String> coin;
+    private String amount;
 
-    public String getAssetID() {
-        return assetID;
+    public static Asset of(final String assetID, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
+        return new Asset(assetID, owner, coin, sender, receiver, amount);
     }
 
-    public String getColor() {
-        return color;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    public String getOwner() {
-        return owner;
-    }
-
-    public int getAppraisedValue() {
-        return appraisedValue;
-    }
-
-    public HashMap<String, String> getCoin() {
-        return coin;
-    }
-
-    public Asset(@JsonProperty("assetID") final String assetID, @JsonProperty("color") final String color,
-                 @JsonProperty("size") final int size, @JsonProperty("owner") final String owner,
-                 @JsonProperty("appraisedValue") final int appraisedValue, @JsonProperty("coin") final HashMap<String, String> coin
-    ) {
+    public Asset(String assetID, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
         this.assetID = assetID;
-        this.color = color;
-        this.size = size;
         this.owner = owner;
-        this.appraisedValue = appraisedValue;
         this.coin = coin;
+        this.sender = sender;
+        this.receiver = receiver;
+        this.amount = amount;
     }
 
     @Override
-    public String toString() {
-        return "Asset{" + "assetID='" + assetID + '\'' + ", color='" + color + '\'' + ", size=" + size + ", owner='" + owner + '\'' + ", appraisedValue=" + appraisedValue + ", coin=" + coin + '}';
-    }
-
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         Asset asset = (Asset) o;
-        return getSize() == asset.getSize() && getAppraisedValue() == asset.getAppraisedValue() && Objects.equals(getAssetID(), asset.getAssetID()) && Objects.equals(getColor(), asset.getColor()) && Objects.equals(getOwner(), asset.getOwner()) && Objects.equals(coin, asset.coin);
+        return Objects.equals(getAssetID(), asset.getAssetID()) && Objects.equals(getOwner(), asset.getOwner()) && Objects.equals(getCoin(), asset.getCoin()) && Objects.equals(getSender(), asset.getSender()) && Objects.equals(getReceiver(), asset.getReceiver()) && Objects.equals(getAmount(), asset.getAmount());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAssetID(), getColor(), getSize(), getOwner(), getAppraisedValue(), coin);
+        return Objects.hash(getAssetID(), getOwner(), getCoin(), getSender(), getReceiver(), getAmount());
     }
 }
