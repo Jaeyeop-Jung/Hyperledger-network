@@ -15,12 +15,15 @@ dependencies {
     implementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.2.+'
     implementation 'org.json:json:+'
     implementation 'com.owlike:genson:1.5'
+    implementation 'org.projectlombok:lombok:1.18.20'
     testImplementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.2.+'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.4.2'
     testImplementation 'org.assertj:assertj-core:3.11.1'
     testImplementation 'org.mockito:mockito-core:2.+'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.1'
 
+    compileOnly 'org.projectlombok:lombok:1.18.22'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
 }
 
 repositories {

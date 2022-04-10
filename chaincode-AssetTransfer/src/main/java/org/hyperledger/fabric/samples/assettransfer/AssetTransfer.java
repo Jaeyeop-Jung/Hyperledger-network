@@ -44,7 +44,7 @@ import com.owlike.genson.Genson;
 @Default
 public final class AssetTransfer implements ContractInterface {
 
-    private final Genson genson = new Genson();
+    private final static ObjectMapper objectMapper = new ObjectMapper();
 
     private enum AssetTransferErrors {
         ASSET_NOT_FOUND,
@@ -57,18 +57,15 @@ public final class AssetTransfer implements ContractInterface {
      * @param ctx the transaction context
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void InitLedger(final Context ctx) {
+    public void InitLedger(final Context ctx) throws JsonProcessingException {
         ChaincodeStub stub = ctx.getStub();
 
         HashMap<String, String> initCoin = new HashMap<>();
         initCoin.put("init", "-1");
 
-        CreateAsset(ctx, "asset1", "blue", 5, "Tomoko", 300, initCoin);
-        CreateAsset(ctx, "asset2", "red", 5, "Brad", 400, initCoin);
-        CreateAsset(ctx, "asset3", "green", 10, "Jin Soo", 500, initCoin);
-        CreateAsset(ctx, "asset4", "yellow", 10, "Max", 600, initCoin);
-        CreateAsset(ctx, "asset5", "black", 15, "Adrian", 700, initCoin);
-        CreateAsset(ctx, "asset6", "white", 15, "Michel", 700, initCoin);
+        CreateAsset(ctx, "asset1", "안규보", initCoin, "None", "None", "0");
+        CreateAsset(ctx, "asset2", "정재엽", initCoin, "None", "None", "0");
+        CreateAsset(ctx, "asset3", "최영창", initCoin, "None", "None", "0");
 
     }
 
@@ -77,15 +74,24 @@ public final class AssetTransfer implements ContractInterface {
      *
      * @param ctx the transaction context
      * @param assetID the ID of the new asset
-     * @param color the color of the new asset
-     * @param size the size for the new asset
      * @param owner the owner of the new asset
-     * @param appraisedValue the appraisedValue of the new asset
+     * @param coin the coin of the new asset
+     * @param from the from of the new asset
+     * @param to the to of the new asset
+     * @param amount the amount of the new asset
      * @return the created asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset CreateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue, final HashMap coin) {
+    public Asset CreateAsset(
+            final Context ctx,
+            final String assetID,
+            final String owner,
+            final HashMap coin,
+            final String from,
+            final String to,
+            final String amount
+    ) throws JsonProcessingException
+    {
         ChaincodeStub stub = ctx.getStub();
 
         if (AssetExists(ctx, assetID)) {
@@ -94,8 +100,8 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
         }
 
-        Asset asset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String assetJSON = genson.serialize(asset);
+        Asset asset = Asset.of(assetID, owner, coin, from, to, amount);
+        String assetJSON = objectMapper.writeValueAsString(asset);
         stub.putStringState(assetID, assetJSON);
 
         return asset;
@@ -109,7 +115,7 @@ public final class AssetTransfer implements ContractInterface {
      * @return the asset found on the ledger if there was one
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public Asset ReadAsset(final Context ctx, final String assetID) {
+    public Asset ReadAsset(final Context ctx, final String assetID) throws JsonProcessingException {
         ChaincodeStub stub = ctx.getStub();
         String assetJSON = stub.getStringState(assetID);
 
@@ -119,7 +125,7 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
         }
 
-        Asset asset = genson.deserialize(assetJSON, Asset.class);
+        Asset asset = objectMapper.readValue(assetJSON, Asset.class);
         return asset;
     }
 
@@ -128,15 +134,20 @@ public final class AssetTransfer implements ContractInterface {
      *
      * @param ctx the transaction context
      * @param assetID the ID of the asset being updated
-     * @param color the color of the asset being updated
-     * @param size the size of the asset being updated
      * @param owner the owner of the asset being updated
-     * @param appraisedValue the appraisedValue of the asset being updated
      * @return the transferred asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset UpdateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue, final HashMap coin) {
+    public Asset UpdateAsset(
+            final Context ctx,
+            final String assetID,
+            final String owner,
+            final HashMap coin,
+            final String from,
+            final String to,
+            final String amount
+    ) throws JsonProcessingException
+    {
         ChaincodeStub stub = ctx.getStub();
 
         if (!AssetExists(ctx, assetID)) {
@@ -145,8 +156,8 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
         }
 
-        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String newAssetJSON = genson.serialize(newAsset);
+        Asset newAsset = Asset.of(assetID, owner, coin, from, to, amount);
+        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
         stub.putStringState(assetID, newAssetJSON);
 
         return newAsset;
@@ -187,44 +198,16 @@ public final class AssetTransfer implements ContractInterface {
     }
 
     /**
-     * Changes the owner of a asset on the ledger.
-     *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being transferred
-     * @param newOwner the new owner
-     * @return the updated asset
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferAsset(final Context ctx, final String assetID, final String newOwner) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetID);
-
-        if (assetJSON == null || assetJSON.isEmpty()) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-        }
-
-        Asset asset = genson.deserialize(assetJSON, Asset.class);
-
-        Asset newAsset = new Asset(asset.getAssetID(), asset.getColor(), asset.getSize(), newOwner, asset.getAppraisedValue(), asset.getCoin());
-        String newAssetJSON = genson.serialize(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
-
-        return newAsset;
-    }
-
-    /**
      * Retrieves all assets from the ledger.
      *
      * @param ctx the transaction context
      * @return array of assets found on the ledger
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetAllAssets(final Context ctx) {
+    public String GetAllAssets(final Context ctx) throws JsonProcessingException {
         ChaincodeStub stub = ctx.getStub();
 
-        List<Asset> queryResults = new ArrayList<Asset>();
+        List<Asset> queryResults = new ArrayList<>();
 
         // To retrieve all assets from the ledger use getStateByRange with empty startKey & endKey.
         // Giving empty startKey & endKey is interpreted as all the keys from beginning to end.
@@ -233,20 +216,17 @@ public final class AssetTransfer implements ContractInterface {
         QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
 
         for (KeyValue result: results) {
-            Asset asset = genson.deserialize(result.getStringValue(), Asset.class);
+            Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
             queryResults.add(asset);
             System.out.println(asset.toString());
         }
 
-        final String response = genson.serialize(queryResults);
-
-        return response;
+        return objectMapper.writeValueAsString(queryResults);
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String CreateCoin(final Context ctx, final String assetID, final String coinName, final String coinValue) throws JsonProcessingException {
+    public String CreateCoin(final Context ctx, final String assetID, final String coinName) throws JsonProcessingException {
         ChaincodeStub stub = ctx.getStub();
-        ObjectMapper objectMapper = new ObjectMapper();
 
         if (!AssetExists(ctx, assetID)) {
             String errorMessage = String.format("Asset %s does not exist", assetID);
@@ -260,26 +240,29 @@ public final class AssetTransfer implements ContractInterface {
         Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
 
         HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
-        coin.put(coinName, coinValue);
+        coin.put(coinName, 0);
 
-        Asset newAsset = new Asset(
+        Asset newAsset = Asset.of(
                 assetID,
-                String.valueOf(assetValueMap.get("color")),
-                Integer.parseInt(String.valueOf(assetValueMap.get("size"))),
                 String.valueOf(assetValueMap.get("owner")),
-                Integer.parseInt(String.valueOf(assetValueMap.get("appraisedValue"))),
-                coin
+                coin,
+                String.valueOf(assetValueMap.get("from")),
+                String.valueOf(assetValueMap.get("to")),
+                String.valueOf(assetValueMap.get("amount"))
         );
-        String newAssetJSON = genson.serialize(newAsset);
-//        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
+        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
         stub.putStringState(assetID, newAssetJSON);
 
         return newAssetJSON;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset UpdateCoin(final Context ctx, final String assetID, final String color, final int size,
-                            final String owner, final int appraisedValue, final HashMap coin, final String coinName, final long coinValue) {
+    public Asset UpdateCoin(
+            final Context ctx,
+            final String assetID,
+            final String coinName,
+            final String coinValue
+    ) throws JsonProcessingException {
         ChaincodeStub stub = ctx.getStub();
 
         if (!AssetExists(ctx, assetID)) {
@@ -288,10 +271,26 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
         }
 
+        byte[] state = stub.getState(assetID);
+
+        String stateToString = new String(state, StandardCharsets.UTF_8);
+
+        Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
+
+        HashMap coin = objectMapper.convertValue(assetValueMap.get(coinName), HashMap.class);
+
         coin.replace(coinName, coinValue);
 
-        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String newAssetJSON = genson.serialize(newAsset);
+        Asset newAsset = Asset.of(
+                assetID,
+                String.valueOf(assetValueMap.get("owner")),
+                coin,
+                String.valueOf(assetValueMap.get("from")),
+                String.valueOf(assetValueMap.get("to")),
+                String.valueOf(assetValueMap.get("amount"))
+        );
+
+        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
         stub.putStringState(assetID, newAssetJSON);
 
         return newAsset;
@@ -318,16 +317,6 @@ public final class AssetTransfer implements ContractInterface {
         }
         history.close();
 
-        return genson.serialize(response);
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetAssetState(final Context ctx, final String assetId) throws Exception {
-        ChaincodeStub stub = ctx.getStub();
-
-        byte[] state = stub.getState(assetId);
-        String response = new String(state, StandardCharsets.UTF_8);
-
-        return genson.serialize(response);
+        return objectMapper.writeValueAsString(response);
     }
 }
