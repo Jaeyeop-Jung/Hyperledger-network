@@ -15,7 +15,7 @@ import org.hyperledger.fabric.contract.annotation.Property;
 public final class Asset {
 
     @Property()
-    private String assetID;
+    private String assetId;
 
     @Property()
     private String owner;
@@ -32,12 +32,12 @@ public final class Asset {
     @Property()
     private String amount;
 
-    public static Asset of(final String assetID, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
-        return new Asset(assetID, owner, coin, sender, receiver, amount);
+    public static Asset of(final String assetId, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
+        return new Asset(assetId, owner, coin, sender, receiver, amount);
     }
 
-    public Asset(String assetID, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
-        this.assetID = assetID;
+    public Asset(String assetId, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
+        this.assetId = assetId;
         this.owner = owner;
         this.coin = coin;
         this.sender = sender;
@@ -50,11 +50,11 @@ public final class Asset {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Asset asset = (Asset) o;
-        return Objects.equals(getAssetID(), asset.getAssetID()) && Objects.equals(getOwner(), asset.getOwner()) && Objects.equals(getCoin(), asset.getCoin()) && Objects.equals(getSender(), asset.getSender()) && Objects.equals(getReceiver(), asset.getReceiver()) && Objects.equals(getAmount(), asset.getAmount());
+        return Objects.equals(this.getAssetId(), asset.getAssetId()) && Objects.equals(getOwner(), asset.getOwner()) && Objects.equals(getCoin(), asset.getCoin()) && Objects.equals(getSender(), asset.getSender()) && Objects.equals(getReceiver(), asset.getReceiver()) && Objects.equals(getAmount(), asset.getAmount());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAssetID(), getOwner(), getCoin(), getSender(), getReceiver(), getAmount());
+        return Objects.hash(this.getAssetId(), getOwner(), getCoin(), getSender(), getReceiver(), getAmount());
     }
 }

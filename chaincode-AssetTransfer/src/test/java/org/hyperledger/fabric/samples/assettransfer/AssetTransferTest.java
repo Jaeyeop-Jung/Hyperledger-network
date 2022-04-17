@@ -117,7 +117,7 @@
 //            when(stub.getStringState("asset1"))
 //                    .thenReturn("{ \"assetID\": \"asset1\", \"color\": \"blue\", \"size\": 5, \"owner\": \"Tomoko\", \"appraisedValue\": 300 }");
 //
-//            Asset asset = contract.ReadAsset(ctx, "asset1");
+//            Asset asset = contract.GetAsset(ctx, "asset1");
 //
 //            assertThat(asset).isEqualTo(new Asset("asset1", "blue", 5, "Tomoko", 300));
 //        }
@@ -131,7 +131,7 @@
 //            when(stub.getStringState("asset1")).thenReturn("");
 //
 //            Throwable thrown = catchThrowable(() -> {
-//                contract.ReadAsset(ctx, "asset1");
+//                contract.GetAsset(ctx, "asset1");
 //            });
 //
 //            assertThat(thrown).isInstanceOf(ChaincodeException.class).hasNoCause()
