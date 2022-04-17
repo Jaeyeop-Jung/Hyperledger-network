@@ -469,17 +469,17 @@ public final class AssetTransfer implements ContractInterface {
      * description :
      *
      * @param ctx         the ctx
-     * @param senderAssetID the from asset id
+     * @param senderAssetId the from asset id
      * @param receiverAssetId   the to asset id
      * @param CoinName    the coin name
      * @param amount      the amount
      * @return the coin
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferCoin(final Context ctx, final String senderAssetID, final String receiverAssetId, final String CoinName, final String amount) {
+    public Asset TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String CoinName, final String amount) {
         try{
             ChaincodeStub stub = ctx.getStub();
-            String senderAssetJSON = stub.getStringState(senderAssetID);
+            String senderAssetJSON = stub.getStringState(senderAssetId);
             String receiverAssetJSON = stub.getStringState(receiverAssetId);
 
             if (senderAssetJSON == null || senderAssetJSON.isEmpty()) {
@@ -502,9 +502,9 @@ public final class AssetTransfer implements ContractInterface {
             Integer senderCoinValue = Integer.parseInt(senderCoin.get(CoinName));
             Integer receiverCoinValue = Integer.parseInt(receiverCoin.get(CoinName));
 
-            if(senderCoinValue - Integer.parseInt(amount) <= 0){
-                System.out.println("Asset" + senderAssetID + "does not have enough coin");
-                throw new ChaincodeException("Asset" + senderAssetID + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
+            if(senderCoinValue - Integer.parseInt(amount) < 0){
+                System.out.println("Asset" + senderAssetId + "does not have enough coin");
+                throw new ChaincodeException("Asset" + senderAssetId + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
             }
 
             senderCoinValue -= Integer.parseInt(amount);
@@ -513,13 +513,13 @@ public final class AssetTransfer implements ContractInterface {
             senderCoin.put(CoinName, senderCoinValue.toString());
             receiverCoin.put(CoinName, receiverCoinValue.toString());
 
-            Asset senderNewAsset = new Asset(senderAsset.getAssetId(), senderAsset.getOwner(), senderCoin, senderAssetID, receiverAssetId, amount);
-            Asset receiverNewAsset = new Asset(receiverAsset.getAssetId(), receiverAsset.getOwner(), receiverCoin, senderAssetID, receiverAssetId, amount);
+            Asset senderNewAsset = new Asset(senderAsset.getAssetId(), senderAsset.getOwner(), senderCoin, senderAssetId, receiverAssetId, amount);
+            Asset receiverNewAsset = new Asset(receiverAsset.getAssetId(), receiverAsset.getOwner(), receiverCoin, senderAssetId, receiverAssetId, amount);
 
             String senderNewAssetJSON = objectMapper.writeValueAsString(senderNewAsset);
             String receiverNewAssetJSON = objectMapper.writeValueAsString(receiverNewAsset);
 
-            stub.putStringState(senderAssetID, senderNewAssetJSON);
+            stub.putStringState(senderAssetId, senderNewAssetJSON);
             stub.putStringState(receiverAssetId, receiverNewAssetJSON);
 
             return senderNewAsset;
