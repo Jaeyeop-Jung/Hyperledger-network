@@ -493,10 +493,10 @@ public final class AssetTransfer implements ContractInterface {
                 throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
             }
 
-            Asset fromAsset = objectMapper.readValue(senderAssetJSON, Asset.class);
+            Asset senderAsset = objectMapper.readValue(senderAssetJSON, Asset.class);
             Asset receiverAsset = objectMapper.readValue(receiverAssetJSON, Asset.class);
 
-            HashMap<String, String> senderCoin = fromAsset.getCoin();
+            HashMap<String, String> senderCoin = senderAsset.getCoin();
             HashMap<String, String> receiverCoin = receiverAsset.getCoin();
 
             Integer senderCoinValue = Integer.parseInt(senderCoin.get(CoinName));
@@ -513,8 +513,8 @@ public final class AssetTransfer implements ContractInterface {
             senderCoin.put(CoinName, senderCoinValue.toString());
             receiverCoin.put(CoinName, receiverCoinValue.toString());
 
-            Asset senderNewAsset = new Asset(fromAsset.getAssetID(), fromAsset.getOwner(), senderCoin, senderAssetID, receiverAssetId, amount);
-            Asset receiverNewAsset = new Asset(receiverAsset.getAssetID(), receiverAsset.getOwner(), receiverCoin, senderAssetID, receiverAssetId, amount);
+            Asset senderNewAsset = new Asset(senderAsset.getAssetId(), senderAsset.getOwner(), senderCoin, senderAssetID, receiverAssetId, amount);
+            Asset receiverNewAsset = new Asset(receiverAsset.getAssetId(), receiverAsset.getOwner(), receiverCoin, senderAssetID, receiverAssetId, amount);
 
             String senderNewAssetJSON = objectMapper.writeValueAsString(senderNewAsset);
             String receiverNewAssetJSON = objectMapper.writeValueAsString(receiverNewAsset);
