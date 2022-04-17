@@ -1,2 +1,0 @@
-org/hyperledger/fabric/samples/assettransfer/AssetTransferTest.java
- org.hyperledger.fabric.samples.assettransfer.AssetTransferTest
