@@ -26,8 +26,6 @@ import org.hyperledger.fabric.shim.ledger.KeyModification;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
-import com.owlike.genson.Genson;
-
 @Contract(
         name = "basic",
         info = @Info(
@@ -48,7 +46,9 @@ public final class AssetTransfer implements ContractInterface {
 
     private enum AssetTransferErrors {
         ASSET_NOT_FOUND,
-        ASSET_ALREADY_EXISTS
+        ASSET_ALREADY_EXISTS,
+
+        ASSET_NOTENOUGH_COINVALUE
     }
 
     /**
@@ -318,5 +318,73 @@ public final class AssetTransfer implements ContractInterface {
         history.close();
 
         return objectMapper.writeValueAsString(response);
+    }
+
+    /**
+     * methodName : TransferCoin
+     * author : YoungChang Choi
+     * description :
+     *
+     * @param ctx         the ctx
+     * @param fromAssetID the from asset id
+     * @param toAssetId   the to asset id
+     * @param CoinName    the coin name
+     * @param amount      the amount
+     * @return the coin
+     * @throws JsonProcessingException the json processing exception
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Asset TransferCoin(final Context ctx, final String fromAssetID, final String toAssetId, final String CoinName, final String amount) throws JsonProcessingException {
+        ChaincodeStub stub = ctx.getStub();
+        String fromAssetJSON = stub.getStringState(fromAssetID);
+        String toAssetJSON = stub.getStringState(toAssetId);
+
+        if (fromAssetJSON == null || fromAssetJSON.isEmpty()) {
+            String errorMessage = String.format("Asset %s does not exist", fromAssetJSON);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+        }
+        else if(toAssetJSON == null || toAssetJSON.isEmpty()) {
+            String errorMessage = String.format("Asset %s does not exist", toAssetJSON);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+        }
+
+        try{
+            Asset fromAsset = objectMapper.readValue(fromAssetJSON, Asset.class);
+            Asset toAsset = objectMapper.readValue(toAssetJSON, Asset.class);
+
+            HashMap<String, String> fromCoin = fromAsset.getCoin();
+            HashMap<String, String> toCoin = toAsset.getCoin();
+
+            Integer fromCoinValue = Integer.parseInt(fromCoin.get(CoinName));
+            Integer toCoinValue = Integer.parseInt(toCoin.get(CoinName));
+
+            if(fromCoinValue - Integer.parseInt(amount) <= 0){
+                System.out.println("Asset" + fromAssetID + "does not have enough coin");
+                throw new ChaincodeException("Asset" + fromAssetID + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
+            }
+
+            fromCoinValue -= Integer.parseInt(amount);
+            toCoinValue += Integer.parseInt(amount);
+
+            fromCoin.put(CoinName, fromCoinValue.toString());
+            toCoin.put(CoinName, toCoinValue.toString());
+
+            Asset fromNewAsset = new Asset(fromAsset.getAssetID(), fromAsset.getOwner(), fromCoin, fromAssetID, toAssetId, amount);
+            Asset toNewAsset = new Asset(toAsset.getAssetID(), toAsset.getOwner(), toCoin, fromAssetID, toAssetId, amount);
+
+            String fromNewAssetJSON = objectMapper.writeValueAsString(fromNewAsset);
+            String toNewAssetJSON = objectMapper.writeValueAsString(toNewAsset);
+
+            stub.putStringState(fromAssetID, fromNewAssetJSON);
+            stub.putStringState(toAssetId, toNewAssetJSON);
+
+            return fromNewAsset;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
