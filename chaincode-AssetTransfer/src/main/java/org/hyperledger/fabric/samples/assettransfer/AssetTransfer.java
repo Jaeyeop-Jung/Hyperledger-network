@@ -430,7 +430,7 @@ public final class AssetTransfer implements ContractInterface {
 
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetHistoryForAssedId(final Context ctx, final String assetId) {
+    public String GetHistoryForAssetId(final Context ctx, final String assetId) {
 
         try {
 
