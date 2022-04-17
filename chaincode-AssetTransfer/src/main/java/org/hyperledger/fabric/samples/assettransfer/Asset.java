@@ -12,7 +12,7 @@ import org.hyperledger.fabric.contract.annotation.Property;
 @ToString
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public final class Asset {
+public class Asset {
 
     @Property()
     private String assetId;
@@ -57,4 +57,25 @@ public final class Asset {
     public int hashCode() {
         return Objects.hash(this.getAssetId(), getOwner(), getCoin(), getSender(), getReceiver(), getAmount());
     }
+
+    public void createCoin(String coinName){
+        coin.put(coinName, "0");
+    }
+
+    public void removeCoin(String coinName){
+        coin.remove(coinName);
+    }
+
+    public void increaseCoinValue(String coinName, String amount){
+        String coinValue = coin.get(coinName);
+        int modifiedCoinValue = Integer.parseInt(coinValue) + Integer.parseInt(amount);
+        coin.put(coinName, String.valueOf(modifiedCoinValue));
+    }
+
+    public void decreaseCoinValue(String coinName, String amount){
+        String coinValue = coin.get(coinName);
+        int modifiedCoinValue = Integer.parseInt(coinValue) - Integer.parseInt(amount);
+        coin.put(coinName, String.valueOf(modifiedCoinValue));
+    }
+
 }

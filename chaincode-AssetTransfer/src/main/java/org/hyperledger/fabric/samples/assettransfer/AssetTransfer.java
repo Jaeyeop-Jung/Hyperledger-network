@@ -241,10 +241,24 @@ public final class AssetTransfer implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public boolean AssetExists(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetID);
+        try {
 
-        return (assetJSON != null && !assetJSON.isEmpty());
+            ChaincodeStub stub = ctx.getStub();
+            String assetJSON = stub.getStringState(assetID);
+
+            if(assetJSON != null || !assetJSON.isEmpty()){
+                String errorMessage = String.format("Asset %s does not exist", assetID);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            }
+
+            return true;
+
+        } catch (ChaincodeException e) {
+
+        }
+
+        return false;
     }
 
 
@@ -274,7 +288,6 @@ public final class AssetTransfer implements ContractInterface {
             for (KeyValue result: results) {
                 Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
                 queryResults.add(asset);
-                System.out.println(asset.toString());
             }
 
             return objectMapper.writeValueAsString(queryResults);
@@ -292,41 +305,22 @@ public final class AssetTransfer implements ContractInterface {
      * description : 모든 Asset의 코인 생성
      *
      * @param ctx      the ctx
-     * @param assetID  the asset id
      * @param coinName the coin name
      * @return 생성 여부
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public boolean CreateCoin(final Context ctx, final String assetID, final String coinName) {
+    public boolean CreateCoin(final Context ctx, final String coinName) {
         try {
 
             ChaincodeStub stub = ctx.getStub();
 
+            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "");
 
-            if (!AssetExists(ctx, assetID)) {
-                String errorMessage = String.format("Asset %s does not exist", assetID);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            for (KeyValue keyValue : assetIdIter) {
+                Asset asset = objectMapper.readValue(keyValue.toString(), Asset.class);
+                asset.createCoin(coinName);
+                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
-
-            byte[] state = stub.getState(assetID);
-            String stateToString = new String(state, StandardCharsets.UTF_8);
-
-            Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
-
-            HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
-            coin.put(coinName, 0);
-
-            Asset newAsset = Asset.of(
-                    assetID,
-                    String.valueOf(assetValueMap.get("owner")),
-                    coin,
-                    String.valueOf(assetValueMap.get("from")),
-                    String.valueOf(assetValueMap.get("to")),
-                    String.valueOf(assetValueMap.get("amount"))
-            );
-            String newAssetJSON = objectMapper.writeValueAsString(newAsset);
-            stub.putStringState(assetID, newAssetJSON);
 
             return true;
 
@@ -343,40 +337,22 @@ public final class AssetTransfer implements ContractInterface {
      * description : 모든 Asset의 코인 삭제
      *
      * @param ctx      the ctx
-     * @param assetID  the asset id
      * @param coinName the coin name
      * @return the boolean
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public boolean RemoveCoin(final Context ctx, final String assetID, final String coinName) {
+    public boolean RemoveCoin(final Context ctx, final String coinName) {
         try {
 
             ChaincodeStub stub = ctx.getStub();
 
-            if (!AssetExists(ctx, assetID)) {
-                String errorMessage = String.format("Asset %s does not exist", assetID);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "");
+
+            for (KeyValue keyValue : assetIdIter) {
+                Asset asset = objectMapper.readValue(keyValue.toString(), Asset.class);
+                asset.removeCoin(coinName);
+                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
-
-            byte[] state = stub.getState(assetID);
-            String stateToString = new String(state, StandardCharsets.UTF_8);
-
-            Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
-
-            HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
-            coin.put(coinName, 0);
-
-            Asset newAsset = Asset.of(
-                    assetID,
-                    String.valueOf(assetValueMap.get("owner")),
-                    coin,
-                    String.valueOf(assetValueMap.get("from")),
-                    String.valueOf(assetValueMap.get("to")),
-                    String.valueOf(assetValueMap.get("amount"))
-            );
-            String newAssetJSON = objectMapper.writeValueAsString(newAsset);
-            stub.putStringState(assetID, newAssetJSON);
 
             return true;
 
@@ -470,63 +446,57 @@ public final class AssetTransfer implements ContractInterface {
      * @param ctx         the ctx
      * @param senderAssetId the from asset id
      * @param receiverAssetId   the to asset id
-     * @param CoinName    the coin name
+     * @param coinName    the coin name
      * @param amount      the amount
      * @return the coin
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String CoinName, final String amount) {
+    public Asset TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
         try{
             ChaincodeStub stub = ctx.getStub();
-            String senderAssetJSON = stub.getStringState(senderAssetId);
-            String receiverAssetJSON = stub.getStringState(receiverAssetId);
 
-            if (senderAssetJSON == null || senderAssetJSON.isEmpty()) {
-                String errorMessage = String.format("Asset %s does not exist", senderAssetJSON);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-            }
-            else if(receiverAssetJSON == null || receiverAssetJSON.isEmpty()) {
-                String errorMessage = String.format("Asset %s does not exist", receiverAssetJSON);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-            }
+            AssetExists(ctx, senderAssetId);
+            AssetExists(ctx, receiverAssetId);
 
-            Asset senderAsset = objectMapper.readValue(senderAssetJSON, Asset.class);
-            Asset receiverAsset = objectMapper.readValue(receiverAssetJSON, Asset.class);
+            Asset senderAsset = objectMapper.readValue(stub.getStringState(senderAssetId), Asset.class);
+            Asset receiverAsset = objectMapper.readValue(stub.getStringState(receiverAssetId), Asset.class);
 
-            HashMap<String, String> senderCoin = senderAsset.getCoin();
-            HashMap<String, String> receiverCoin = receiverAsset.getCoin();
+            senderAsset.decreaseCoinValue(coinName, amount);
+            receiverAsset.increaseCoinValue(coinName, amount);
 
-            Integer senderCoinValue = Integer.parseInt(senderCoin.get(CoinName));
-            Integer receiverCoinValue = Integer.parseInt(receiverCoin.get(CoinName));
+//            HashMap<String, String> senderCoin = senderAsset.getCoin();
+//            HashMap<String, String> receiverCoin = receiverAsset.getCoin();
+//
+//            Integer senderCoinValue = Integer.parseInt(senderCoin.get(coinName));
+//            Integer receiverCoinValue = Integer.parseInt(receiverCoin.get(coinName));
+//
+//            if(senderCoinValue - Integer.parseInt(amount) < 0){
+//                System.out.println("Asset" + senderAssetId + "does not have enough coin");
+//                throw new ChaincodeException("Asset" + senderAssetId + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
+//            }
+//
+//            senderCoinValue -= Integer.parseInt(amount);
+//            receiverCoinValue += Integer.parseInt(amount);
+//
+//            senderCoin.put(coinName, senderCoinValue.toString());
+//            receiverCoin.put(coinName, receiverCoinValue.toString());
+//
+//            Asset senderNewAsset = new Asset(senderAsset.getAssetId(), senderAsset.getOwner(), senderCoin, senderAssetId, receiverAssetId, amount);
+//            Asset receiverNewAsset = new Asset(receiverAsset.getAssetId(), receiverAsset.getOwner(), receiverCoin, senderAssetId, receiverAssetId, amount);
 
-            if(senderCoinValue - Integer.parseInt(amount) < 0){
-                System.out.println("Asset" + senderAssetId + "does not have enough coin");
-                throw new ChaincodeException("Asset" + senderAssetId + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
-            }
+//            String senderNewAssetJSON = objectMapper.writeValueAsString(senderNewAsset);
+//            String receiverNewAssetJSON = objectMapper.writeValueAsString(receiverNewAsset);
 
-            senderCoinValue -= Integer.parseInt(amount);
-            receiverCoinValue += Integer.parseInt(amount);
+            stub.putStringState(senderAssetId, objectMapper.writeValueAsString(senderAsset));
+            stub.putStringState(receiverAssetId, objectMapper.writeValueAsString(receiverAsset));
 
-            senderCoin.put(CoinName, senderCoinValue.toString());
-            receiverCoin.put(CoinName, receiverCoinValue.toString());
-
-            Asset senderNewAsset = new Asset(senderAsset.getAssetId(), senderAsset.getOwner(), senderCoin, senderAssetId, receiverAssetId, amount);
-            Asset receiverNewAsset = new Asset(receiverAsset.getAssetId(), receiverAsset.getOwner(), receiverCoin, senderAssetId, receiverAssetId, amount);
-
-            String senderNewAssetJSON = objectMapper.writeValueAsString(senderNewAsset);
-            String receiverNewAssetJSON = objectMapper.writeValueAsString(receiverNewAsset);
-
-            stub.putStringState(senderAssetId, senderNewAssetJSON);
-            stub.putStringState(receiverAssetId, receiverNewAssetJSON);
-
-            return senderNewAsset;
+            return senderAsset;
         } catch (JsonProcessingException e) {
             System.out.println("Object to Json Exception: " + e.getMessage());
         } catch (NumberFormatException e) {
             System.out.println("NumberFormatException: " + e.getMessage());
         }
+
         return null;
     }
 }
