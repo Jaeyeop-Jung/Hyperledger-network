@@ -7,6 +7,7 @@ import java.util.Objects;
 import lombok.*;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
+import org.hyperledger.fabric.shim.ChaincodeException;
 
 @DataType()
 @ToString
@@ -69,11 +70,18 @@ public class Asset {
     public void increaseCoinValue(String coinName, String amount){
         String coinValue = coin.get(coinName);
         int modifiedCoinValue = Integer.parseInt(coinValue) + Integer.parseInt(amount);
+
         coin.put(coinName, String.valueOf(modifiedCoinValue));
     }
 
-    public void decreaseCoinValue(String coinName, String amount){
+    public void decreaseCoinValue(String coinName, String amount) throws ChaincodeException {
         String coinValue = coin.get(coinName);
+
+        if(Integer.parseInt(coin.get(coinName)) - Integer.parseInt(amount) < 0){
+            System.out.println("Asset" + assetId + "does not have enough coin");
+            throw new ChaincodeException("Asset" + assetId + "does not have enough coin", "ASSET_NOTENOUGH_COINVALUE");
+        }
+
         int modifiedCoinValue = Integer.parseInt(coinValue) - Integer.parseInt(amount);
         coin.put(coinName, String.valueOf(modifiedCoinValue));
     }
