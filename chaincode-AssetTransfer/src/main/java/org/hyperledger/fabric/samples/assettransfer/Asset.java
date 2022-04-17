@@ -67,23 +67,29 @@ public class Asset {
         coin.remove(coinName);
     }
 
-    public void increaseCoinValue(String coinName, String amount){
+    public void increaseCoinValue(String senderAssetId, String coinName, String amount){
         String coinValue = coin.get(coinName);
         int modifiedCoinValue = Integer.parseInt(coinValue) + Integer.parseInt(amount);
 
         coin.put(coinName, String.valueOf(modifiedCoinValue));
+        sender = senderAssetId;
+        receiver = assetId;
+        this.amount = amount;
     }
 
-    public void decreaseCoinValue(String coinName, String amount) throws ChaincodeException {
+    public void decreaseCoinValue(String receiverAssetId, String coinName, String amount) throws ChaincodeException {
         String coinValue = coin.get(coinName);
 
         if(Integer.parseInt(coin.get(coinName)) - Integer.parseInt(amount) < 0){
-            System.out.println("Asset" + assetId + "does not have enough coin");
-            throw new ChaincodeException("Asset" + assetId + "does not have enough coin", "ASSET_NOTENOUGH_COINVALUE");
+            System.out.println("Asset " + assetId + " does not have enough coin");
+            throw new ChaincodeException("Asset " + assetId + " does not have enough coin", "ASSET_NOTENOUGH_COINVALUE");
         }
 
         int modifiedCoinValue = Integer.parseInt(coinValue) - Integer.parseInt(amount);
         coin.put(coinName, String.valueOf(modifiedCoinValue));
+        receiver = receiverAssetId;
+        sender = assetId;
+        this.amount = amount;
     }
 
 }
