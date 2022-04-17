@@ -254,7 +254,6 @@ public final class AssetTransfer implements ContractInterface {
      *
      * @param ctx the ctx
      * @return the string
-     * @throws JsonProcessingException the json processing exception
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String GetAllAssets(final Context ctx) {
@@ -286,36 +285,105 @@ public final class AssetTransfer implements ContractInterface {
         return null;
     }
 
+    /**
+     * methodName : CreateCoin
+     * author : Jaeyeop Jung
+     * description : 모든 Asset의 코인 생성
+     *
+     * @param ctx      the ctx
+     * @param assetID  the asset id
+     * @param coinName the coin name
+     * @return 생성 여부
+     */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String CreateCoin(final Context ctx, final String assetID, final String coinName) throws JsonProcessingException {
-        ChaincodeStub stub = ctx.getStub();
+    public boolean CreateCoin(final Context ctx, final String assetID, final String coinName) {
+        try {
 
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            ChaincodeStub stub = ctx.getStub();
+
+
+            if (!AssetExists(ctx, assetID)) {
+                String errorMessage = String.format("Asset %s does not exist", assetID);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            }
+
+            byte[] state = stub.getState(assetID);
+            String stateToString = new String(state, StandardCharsets.UTF_8);
+
+            Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
+
+            HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
+            coin.put(coinName, 0);
+
+            Asset newAsset = Asset.of(
+                    assetID,
+                    String.valueOf(assetValueMap.get("owner")),
+                    coin,
+                    String.valueOf(assetValueMap.get("from")),
+                    String.valueOf(assetValueMap.get("to")),
+                    String.valueOf(assetValueMap.get("amount"))
+            );
+            String newAssetJSON = objectMapper.writeValueAsString(newAsset);
+            stub.putStringState(assetID, newAssetJSON);
+
+            return true;
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        byte[] state = stub.getState(assetID);
-        String stateToString = new String(state, StandardCharsets.UTF_8);
+        return false;
+    }
 
-        Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
+    /**
+     * methodName : RemoveCoin
+     * author : Jaeyeop Jung
+     * description : 모든 Asset의 코인 삭제
+     *
+     * @param ctx      the ctx
+     * @param assetID  the asset id
+     * @param coinName the coin name
+     * @return the boolean
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public boolean RemoveCoin(final Context ctx, final String assetID, final String coinName) {
+        try {
 
-        HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
-        coin.put(coinName, 0);
+            ChaincodeStub stub = ctx.getStub();
 
-        Asset newAsset = Asset.of(
-                assetID,
-                String.valueOf(assetValueMap.get("owner")),
-                coin,
-                String.valueOf(assetValueMap.get("from")),
-                String.valueOf(assetValueMap.get("to")),
-                String.valueOf(assetValueMap.get("amount"))
-        );
-        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
+            if (!AssetExists(ctx, assetID)) {
+                String errorMessage = String.format("Asset %s does not exist", assetID);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            }
 
-        return newAssetJSON;
+            byte[] state = stub.getState(assetID);
+            String stateToString = new String(state, StandardCharsets.UTF_8);
+
+            Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
+
+            HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
+            coin.put(coinName, 0);
+
+            Asset newAsset = Asset.of(
+                    assetID,
+                    String.valueOf(assetValueMap.get("owner")),
+                    coin,
+                    String.valueOf(assetValueMap.get("from")),
+                    String.valueOf(assetValueMap.get("to")),
+                    String.valueOf(assetValueMap.get("amount"))
+            );
+            String newAssetJSON = objectMapper.writeValueAsString(newAsset);
+            stub.putStringState(assetID, newAssetJSON);
+
+            return true;
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        }
+
+        return false;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -360,25 +428,36 @@ public final class AssetTransfer implements ContractInterface {
 
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetHistoryForAssedId(final Context ctx, final String assetId) throws Exception {
-        ChaincodeStub stub = ctx.getStub();
+    public String GetHistoryForAssedId(final Context ctx, final String assetId) {
 
-        Map<Long, String> response = new HashMap<>();
+        try {
 
-        QueryResultsIterator<KeyModification> history = stub.getHistoryForKey(assetId);
-        if (history == null) {
-            String errorMessage = String.format("Product %s does not exist", assetId);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, "Incorrect AssetId");
+            ChaincodeStub stub = ctx.getStub();
+
+            Map<Long, String> response = new HashMap<>();
+
+            QueryResultsIterator<KeyModification> history = stub.getHistoryForKey(assetId);
+            if (history == null) {
+                String errorMessage = String.format("Product %s does not exist", assetId);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, "Incorrect AssetId");
+            }
+
+            long cnt = 1;
+            for (KeyModification keyModification : history) {
+                String value = "TIMESTAMP = " + keyModification.getTimestamp() + " TxId = " + keyModification.getTxId() + " Value = " + keyModification.getStringValue();
+                response.put(cnt++, value);
+            }
+            history.close();
+
+            return objectMapper.writeValueAsString(response);
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        } catch (Exception e){
+            System.out.println("QueryResultsIterator close Excepiton: " + e.getMessage());
         }
 
-        long cnt = 1;
-        for (KeyModification keyModification : history) {
-            String value = "TIMESTAMP = " + keyModification.getTimestamp() + " TxId = " + keyModification.getTxId() + " Value = " + keyModification.getStringValue();
-            response.put(cnt++, value);
-        }
-        history.close();
-
-        return objectMapper.writeValueAsString(response);
+        return null;
     }
 }
