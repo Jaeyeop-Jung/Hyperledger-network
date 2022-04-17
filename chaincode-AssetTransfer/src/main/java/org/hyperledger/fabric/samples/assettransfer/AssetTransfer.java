@@ -326,65 +326,65 @@ public final class AssetTransfer implements ContractInterface {
      * description :
      *
      * @param ctx         the ctx
-     * @param fromAssetID the from asset id
-     * @param toAssetId   the to asset id
+     * @param senderAssetID the from asset id
+     * @param receiverAssetId   the to asset id
      * @param CoinName    the coin name
      * @param amount      the amount
      * @return the coin
-     * @throws JsonProcessingException the json processing exception
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferCoin(final Context ctx, final String fromAssetID, final String toAssetId, final String CoinName, final String amount) throws JsonProcessingException {
-        ChaincodeStub stub = ctx.getStub();
-        String fromAssetJSON = stub.getStringState(fromAssetID);
-        String toAssetJSON = stub.getStringState(toAssetId);
-
-        if (fromAssetJSON == null || fromAssetJSON.isEmpty()) {
-            String errorMessage = String.format("Asset %s does not exist", fromAssetJSON);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-        }
-        else if(toAssetJSON == null || toAssetJSON.isEmpty()) {
-            String errorMessage = String.format("Asset %s does not exist", toAssetJSON);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-        }
-
+    public Asset TransferCoin(final Context ctx, final String senderAssetID, final String receiverAssetId, final String CoinName, final String amount) {
         try{
-            Asset fromAsset = objectMapper.readValue(fromAssetJSON, Asset.class);
-            Asset toAsset = objectMapper.readValue(toAssetJSON, Asset.class);
+            ChaincodeStub stub = ctx.getStub();
+            String senderAssetJSON = stub.getStringState(senderAssetID);
+            String receiverAssetJSON = stub.getStringState(receiverAssetId);
 
-            HashMap<String, String> fromCoin = fromAsset.getCoin();
-            HashMap<String, String> toCoin = toAsset.getCoin();
-
-            Integer fromCoinValue = Integer.parseInt(fromCoin.get(CoinName));
-            Integer toCoinValue = Integer.parseInt(toCoin.get(CoinName));
-
-            if(fromCoinValue - Integer.parseInt(amount) <= 0){
-                System.out.println("Asset" + fromAssetID + "does not have enough coin");
-                throw new ChaincodeException("Asset" + fromAssetID + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
+            if (senderAssetJSON == null || senderAssetJSON.isEmpty()) {
+                String errorMessage = String.format("Asset %s does not exist", senderAssetJSON);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            }
+            else if(receiverAssetJSON == null || receiverAssetJSON.isEmpty()) {
+                String errorMessage = String.format("Asset %s does not exist", receiverAssetJSON);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
             }
 
-            fromCoinValue -= Integer.parseInt(amount);
-            toCoinValue += Integer.parseInt(amount);
+            Asset fromAsset = objectMapper.readValue(senderAssetJSON, Asset.class);
+            Asset receiverAsset = objectMapper.readValue(receiverAssetJSON, Asset.class);
 
-            fromCoin.put(CoinName, fromCoinValue.toString());
-            toCoin.put(CoinName, toCoinValue.toString());
+            HashMap<String, String> senderCoin = fromAsset.getCoin();
+            HashMap<String, String> receiverCoin = receiverAsset.getCoin();
 
-            Asset fromNewAsset = new Asset(fromAsset.getAssetID(), fromAsset.getOwner(), fromCoin, fromAssetID, toAssetId, amount);
-            Asset toNewAsset = new Asset(toAsset.getAssetID(), toAsset.getOwner(), toCoin, fromAssetID, toAssetId, amount);
+            Integer senderCoinValue = Integer.parseInt(senderCoin.get(CoinName));
+            Integer receiverCoinValue = Integer.parseInt(receiverCoin.get(CoinName));
 
-            String fromNewAssetJSON = objectMapper.writeValueAsString(fromNewAsset);
-            String toNewAssetJSON = objectMapper.writeValueAsString(toNewAsset);
+            if(senderCoinValue - Integer.parseInt(amount) <= 0){
+                System.out.println("Asset" + senderAssetID + "does not have enough coin");
+                throw new ChaincodeException("Asset" + senderAssetID + "does not have enough coin", AssetTransferErrors.ASSET_NOTENOUGH_COINVALUE.toString());
+            }
 
-            stub.putStringState(fromAssetID, fromNewAssetJSON);
-            stub.putStringState(toAssetId, toNewAssetJSON);
+            senderCoinValue -= Integer.parseInt(amount);
+            receiverCoinValue += Integer.parseInt(amount);
 
-            return fromNewAsset;
+            senderCoin.put(CoinName, senderCoinValue.toString());
+            receiverCoin.put(CoinName, receiverCoinValue.toString());
+
+            Asset senderNewAsset = new Asset(fromAsset.getAssetID(), fromAsset.getOwner(), senderCoin, senderAssetID, receiverAssetId, amount);
+            Asset receiverNewAsset = new Asset(receiverAsset.getAssetID(), receiverAsset.getOwner(), receiverCoin, senderAssetID, receiverAssetId, amount);
+
+            String senderNewAssetJSON = objectMapper.writeValueAsString(senderNewAsset);
+            String receiverNewAssetJSON = objectMapper.writeValueAsString(receiverNewAsset);
+
+            stub.putStringState(senderAssetID, senderNewAssetJSON);
+            stub.putStringState(receiverAssetId, receiverNewAssetJSON);
+
+            return senderNewAsset;
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            System.out.println("Object to Json Exception: " + e.getMessage());
         } catch (NumberFormatException e) {
-            throw new RuntimeException(e);
+            System.out.println("NumberFormatException: " + e.getMessage());
         }
+        return null;
     }
 }
