@@ -48,7 +48,6 @@ public final class AssetTransfer implements ContractInterface {
     private enum AssetTransferErrors {
         ASSET_NOT_FOUND,
         ASSET_ALREADY_EXISTS,
-
         ASSET_NOTENOUGH_COINVALUE
     }
 
