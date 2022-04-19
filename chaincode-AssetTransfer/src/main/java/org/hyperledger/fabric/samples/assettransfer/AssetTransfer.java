@@ -64,9 +64,9 @@ public final class AssetTransfer implements ContractInterface {
 
         HashMap<String, String> initCoin = new HashMap<>();
 
-        CreateAsset(ctx, "asset1", "안규보", initCoin, "None", "None", "0");
-        CreateAsset(ctx, "asset2", "정재엽", initCoin, "None", "None", "0");
-        CreateAsset(ctx, "asset3", "최영창", initCoin, "None", "None", "0");
+        CreateAsset(ctx, "asset1", "안규보", initCoin, null, null, null);
+        CreateAsset(ctx, "asset2", "정재엽", initCoin, null, null, null);
+        CreateAsset(ctx, "asset3", "최영창", initCoin, null, null, null);
     }
 
     /**
@@ -364,7 +364,7 @@ public final class AssetTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public boolean UpdateCoin(
+    public boolean UpdateAllAssetCoin(
             final Context ctx,
             final String coinName,
             final String coinValue
@@ -377,9 +377,35 @@ public final class AssetTransfer implements ContractInterface {
 
             for (KeyValue keyValue : assetIdIter) {
                 Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
-                asset.increaseCoinValue("NONE", coinName, coinValue);
+                asset.modifyCoinValue(null, null, coinName, coinValue);
                 stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
+
+            return true;
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        }
+
+        return false;
+    }
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public boolean UpdateAssetCoin(
+            final Context ctx,
+            final String assetId,
+            final String coinName,
+            final String coinValue
+    ) {
+        try {
+
+            ChaincodeStub stub = ctx.getStub();
+
+            AssetExists(ctx, assetId);
+
+            Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
+            asset.modifyCoinValue(null, null, coinName, coinValue);
+
+            stub.putStringState(assetId, objectMapper.writeValueAsString(asset));
 
             return true;
 
@@ -414,8 +440,8 @@ public final class AssetTransfer implements ContractInterface {
             Asset senderAsset = objectMapper.readValue(stub.getStringState(senderAssetId), Asset.class);
             Asset receiverAsset = objectMapper.readValue(stub.getStringState(receiverAssetId), Asset.class);
 
-            senderAsset.decreaseCoinValue(receiverAssetId, coinName, amount);
-            receiverAsset.increaseCoinValue(senderAssetId, coinName, amount);
+            senderAsset.modifyCoinValue(senderAssetId, receiverAssetId, coinName, amount);
+            receiverAsset.modifyCoinValue(senderAssetId, receiverAssetId, coinName, amount);
 
             stub.putStringState(senderAssetId, objectMapper.writeValueAsString(senderAsset));
             stub.putStringState(receiverAssetId, objectMapper.writeValueAsString(receiverAsset));
