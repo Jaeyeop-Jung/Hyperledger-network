@@ -62,11 +62,9 @@ public final class AssetTransfer implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public void InitLedger(final Context ctx) {
 
-        HashMap<String, String> initCoin = new HashMap<>();
-
-        CreateAsset(ctx, "asset1", "안규보", initCoin, null, null, null);
-        CreateAsset(ctx, "asset2", "정재엽", initCoin, null, null, null);
-        CreateAsset(ctx, "asset3", "최영창", initCoin, null, null, null);
+        CreateAsset(ctx, "asset1", "안규보");
+        CreateAsset(ctx, "asset2", "정재엽");
+        CreateAsset(ctx, "asset3", "최영창");
     }
 
     /**
@@ -77,21 +75,13 @@ public final class AssetTransfer implements ContractInterface {
      * @param ctx     the ctx
      * @param assetId the asset id
      * @param owner   the owner
-     * @param coin    the coin
-     * @param sender    the sender
-     * @param receiver      the receiver
-     * @param amount  the amount
      * @return created Asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset CreateAsset (
             final Context ctx,
             final String assetId,
-            final String owner,
-            final HashMap coin,
-            final String sender,
-            final String receiver,
-            final String amount
+            final String owner
     )
     {
 
@@ -105,7 +95,9 @@ public final class AssetTransfer implements ContractInterface {
                 throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
             }
 
-            Asset asset = Asset.of(assetId, owner, coin, sender, receiver, amount);
+            HashMap<String, String> coin = new HashMap<>();
+
+            Asset asset = Asset.of(assetId, owner, coin, null, null, null);
             String assetJSON = objectMapper.writeValueAsString(asset);
             stub.putStringState(assetId, assetJSON);
 
