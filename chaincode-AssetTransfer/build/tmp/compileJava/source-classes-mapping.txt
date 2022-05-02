@@ -1,5 +1,14 @@
+exception/AlreadyExistAssetException.java
+ exception.AlreadyExistAssetException
+exception/NotEnoughCoinValueException.java
+ exception.NotEnoughCoinValueException
+exception/AssetNotFoundException.java
+ exception.AssetNotFoundException
 org/hyperledger/fabric/samples/assettransfer/AssetTransfer.java
  org.hyperledger.fabric.samples.assettransfer.AssetTransfer
- org.hyperledger.fabric.samples.assettransfer.AssetTransfer$AssetTransferErrors
 org/hyperledger/fabric/samples/assettransfer/Asset.java
  org.hyperledger.fabric.samples.assettransfer.Asset
+exception/AlreadyExistsCoinException.java
+ exception.AlreadyExistsCoinException
+exception/CoinNotFoundException.java
+ exception.CoinNotFoundException

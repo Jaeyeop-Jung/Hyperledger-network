@@ -4,6 +4,7 @@ package org.hyperledger.fabric.samples.assettransfer;
 import java.util.HashMap;
 import java.util.Objects;
 
+import exception.NotEnoughCoinValueException;
 import lombok.*;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
@@ -67,11 +68,11 @@ public class Asset {
         coin.remove(coinName);
     }
 
-    public void modifyCoinValue(String senderAssetId, String receiverAssetId, String coinName, String amount) throws ChaincodeException {
+    public void modifyCoinValue(String senderAssetId, String receiverAssetId, String coinName, String amount) throws NotEnoughCoinValueException {
         int modifiedCoinValue = Integer.parseInt(coin.get(coinName)) + Integer.parseInt(amount);
         if (modifiedCoinValue < 0) {
-            System.out.println("Asset " + assetId + " does not have enough coin");
-            throw new ChaincodeException("Asset " + assetId + " does not have enough coin", "ASSET_NOTENOUGH_COINVALUE");
+            String errormessage = String.format("Asset %s does not have enough coin", senderAssetId);
+            throw new NotEnoughCoinValueException(errormessage);
         }
 
         coin.put(coinName, String.valueOf(modifiedCoinValue));
