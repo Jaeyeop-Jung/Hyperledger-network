@@ -45,8 +45,6 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 public final class AssetTransfer implements ContractInterface {
 
     private final static ObjectMapper objectMapper = new ObjectMapper();
-    private static ArrayList<String> currentCoin = new ArrayList<>();
-
 
     /**
      * methodName : InitLedger
@@ -217,19 +215,23 @@ public final class AssetTransfer implements ContractInterface {
      * @param assetId the asset id
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void DeleteAsset(final Context ctx, final String assetId) {
+    public boolean DeleteAsset(final Context ctx, final String assetId) {
         try {
-            ChaincodeStub stub = ctx.getStub();
-
             if (!AssetExists(ctx, assetId)) {
                 String errorMessage = String.format("Asset %s does not exist", assetId);
                 throw new AssetNotFoundException(errorMessage);
             }
 
+            ChaincodeStub stub = ctx.getStub();
+
             stub.delState(assetId);
+
+            return true;
         } catch (AssetNotFoundException e){
             System.out.println(e.getMessage());
         }
+
+        return false;
     }
 
 
@@ -280,10 +282,21 @@ public final class AssetTransfer implements ContractInterface {
      * @return the exists
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public boolean CoinExists(final Context ctx, final String coinName){
+    public boolean CoinExists(final Context ctx, final String coinName) {
+        try {
 
-        if(currentCoin.contains(coinName)){
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset root = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            if(!root.getCoin().containsKey(coinName)){
+                return false;
+            }
+
             return true;
+
+        } catch (JsonProcessingException e){
+            System.out.println(e.getMessage());
+
         }
 
         return false;
@@ -316,7 +329,6 @@ public final class AssetTransfer implements ContractInterface {
                 stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
 
-            currentCoin.add(coinName);
             return true;
 
         } catch (AlreadyExistsCoinException e){
@@ -355,7 +367,6 @@ public final class AssetTransfer implements ContractInterface {
                 stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
 
-            currentCoin.remove(coinName);
             return true;
 
         } catch (CoinNotFoundException e){
