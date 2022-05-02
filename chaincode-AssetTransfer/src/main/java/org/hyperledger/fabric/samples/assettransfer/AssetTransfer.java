@@ -13,6 +13,9 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import exception.AlreadyExistAssetException;
+import exception.AssetNotFoundException;
+import exception.CoinNotFoundException;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -44,12 +47,7 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 public final class AssetTransfer implements ContractInterface {
 
     private final static ObjectMapper objectMapper = new ObjectMapper();
-
-    private enum AssetTransferErrors {
-        ASSET_NOT_FOUND,
-        ASSET_ALREADY_EXISTS,
-        ASSET_NOTENOUGH_COINVALUE
-    }
+    private static ArrayList<String> currentCoin = new ArrayList<>();
 
 
     /**
@@ -65,6 +63,7 @@ public final class AssetTransfer implements ContractInterface {
         CreateAsset(ctx, "asset1", "안규보");
         CreateAsset(ctx, "asset2", "정재엽");
         CreateAsset(ctx, "asset3", "최영창");
+
     }
 
     /**
@@ -89,10 +88,9 @@ public final class AssetTransfer implements ContractInterface {
 
             ChaincodeStub stub = ctx.getStub();
 
-            if (AssetExists(ctx, assetId)) {
+            if(AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s already exists", assetId);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
+                throw new AlreadyExistAssetException(errorMessage);
             }
 
             HashMap<String, String> coin = new HashMap<>();
@@ -103,6 +101,8 @@ public final class AssetTransfer implements ContractInterface {
 
             return asset;
 
+        } catch (AlreadyExistAssetException e){
+            System.out.println(e.getMessage());
         } catch (JsonProcessingException e) {
             System.out.println("Object to Json Exception: " + e.getMessage());
         }
@@ -128,16 +128,17 @@ public final class AssetTransfer implements ContractInterface {
             ChaincodeStub stub = ctx.getStub();
             String assetJSON = stub.getStringState(assetId);
 
-            if (assetJSON == null || assetJSON.isEmpty()) {
+            if(!AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s does not exist", assetId);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+                throw new AssetNotFoundException(errorMessage);
             }
 
             Asset asset = objectMapper.readValue(assetJSON, Asset.class);
 
             return asset;
 
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
         } catch (JsonProcessingException e) {
             System.out.println("Object to Json Exception: " + e.getMessage());
         }
@@ -167,10 +168,9 @@ public final class AssetTransfer implements ContractInterface {
 
             ChaincodeStub stub = ctx.getStub();
 
-            if (!AssetExists(ctx, assetId)) {
+            if(!AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s does not exist", assetId);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+                throw new AssetNotFoundException(errorMessage);
             }
 
             byte[] stateBytes = stub.getState(assetId);
@@ -190,6 +190,8 @@ public final class AssetTransfer implements ContractInterface {
 
             return modifiedAsset;
 
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
         } catch (JsonProcessingException e) {
             System.out.println("Object to Json Exception: " + e.getMessage());
         } catch (IOException e) {
@@ -206,19 +208,22 @@ public final class AssetTransfer implements ContractInterface {
      * description : Asset 삭제
      *
      * @param ctx     the ctx
-     * @param assetID the asset id
+     * @param assetId the asset id
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void DeleteAsset(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
+    public void DeleteAsset(final Context ctx, final String assetId) {
+        try {
+            ChaincodeStub stub = ctx.getStub();
 
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            if (!AssetExists(ctx, assetId)) {
+                String errorMessage = String.format("Asset %s does not exist", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+
+            stub.delState(assetId);
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
         }
-
-        stub.delState(assetID);
     }
 
 
@@ -228,29 +233,19 @@ public final class AssetTransfer implements ContractInterface {
      * description : Asset 존재 확인
      *
      * @param ctx     the ctx
-     * @param assetID the asset id
+     * @param assetId the asset id
      * @return the boolean
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public boolean AssetExists(final Context ctx, final String assetID) {
-        try {
+    public boolean AssetExists(final Context ctx, final String assetId) {
+        ChaincodeStub stub = ctx.getStub();
+        String assetJSON = stub.getStringState(assetId);
 
-            ChaincodeStub stub = ctx.getStub();
-            String assetJSON = stub.getStringState(assetID);
-
-            if(assetJSON != null || !assetJSON.isEmpty()){
-                String errorMessage = String.format("Asset %s does not exist", assetID);
-                System.out.println(errorMessage);
-                throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-            }
-
-            return true;
-
-        } catch (ChaincodeException e) {
-
+        if(assetJSON != null || !assetJSON.isEmpty()){
+            return false;
         }
 
-        return false;
+        return true;
     }
 
 
@@ -291,6 +286,24 @@ public final class AssetTransfer implements ContractInterface {
         return null;
     }
 
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean CoinExists(final Context ctx, final String coinName){
+        try {
+
+            if(!currentCoin.contains(coinName)){
+                String errorMessage = String.format("Coin %s does not exist", coinName);
+                throw new CoinNotFoundException(errorMessage);
+            }
+
+            return true;
+
+        } catch (CoinNotFoundException e){
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
+
     /**
      * methodName : CreateCoin
      * author : Jaeyeop Jung
@@ -303,6 +316,7 @@ public final class AssetTransfer implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public boolean CreateCoin(final Context ctx, final String coinName) {
         try {
+            CoinExists(ctx, coinName);
 
             ChaincodeStub stub = ctx.getStub();
 
@@ -314,6 +328,7 @@ public final class AssetTransfer implements ContractInterface {
                 stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
 
+            currentCoin.add(coinName);
             return true;
 
         } catch (JsonProcessingException e) {
@@ -335,6 +350,7 @@ public final class AssetTransfer implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public boolean RemoveCoin(final Context ctx, final String coinName) {
         try {
+            CoinExists(ctx, coinName);
 
             ChaincodeStub stub = ctx.getStub();
 
@@ -346,6 +362,7 @@ public final class AssetTransfer implements ContractInterface {
                 stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
             }
 
+            currentCoin.remove(coinName);
             return true;
 
         } catch (JsonProcessingException e) {
