@@ -141,16 +141,14 @@ public final class AssetTransfer implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public Asset GetAsset(final Context ctx, final String assetId) {
-
         try{
-
-            ChaincodeStub stub = ctx.getStub();
-            String assetJSON = stub.getStringState(assetId);
-
             if(!AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s does not exist", assetId);
                 throw new AssetNotFoundException(errorMessage);
             }
+
+            ChaincodeStub stub = ctx.getStub();
+            String assetJSON = stub.getStringState(assetId);
 
             Asset asset = objectMapper.readValue(assetJSON, Asset.class);
 
@@ -173,41 +171,30 @@ public final class AssetTransfer implements ContractInterface {
      *
      * @param ctx          the ctx
      * @param assetId      the asset id
-     * @param newOwnerName the new owner name
+     * @param newOwner the new owner name
      * @return 수정된 Asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset ChangeOwner(
             final Context ctx,
             final String assetId,
-            final String newOwnerName
+            final String newOwner
     )
     {
         try {
-
-            ChaincodeStub stub = ctx.getStub();
-
             if(!AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s does not exist", assetId);
                 throw new AssetNotFoundException(errorMessage);
             }
 
-            byte[] stateBytes = stub.getState(assetId);
-            Map stateMap = objectMapper.readValue(stateBytes, Map.class);
+            ChaincodeStub stub = ctx.getStub();
 
-            Asset modifiedAsset = Asset.of(
-                    assetId,
-                    newOwnerName,
-                    objectMapper.convertValue(stateMap.get("coin"), HashMap.class),
-                    stateMap.get("sender").toString(),
-                    stateMap.get("receiver").toString(),
-                    stateMap.get("amount").toString()
-            );
+            Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
+            asset.changeOwner(newOwner);
 
-            String modifiedAssetJSON = objectMapper.writeValueAsString(modifiedAsset);
-            stub.putStringState(assetId, modifiedAssetJSON);
+            stub.putStringState(assetId, objectMapper.writeValueAsString(asset));
 
-            return modifiedAsset;
+            return asset;
 
         } catch (AssetNotFoundException e){
             System.out.println(e.getMessage());

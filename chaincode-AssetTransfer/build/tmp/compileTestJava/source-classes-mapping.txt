@@ -1,4 +1,4 @@
-org/hyperledger/fabric/samples/assettransfer/CustomAssetTransferTest.java
- org.hyperledger.fabric.samples.assettransfer.CustomAssetTransferTest
 org/hyperledger/fabric/samples/assettransfer/AssetTest.java
  org.hyperledger.fabric.samples.assettransfer.AssetTest
+org/hyperledger/fabric/samples/assettransfer/AssetTransferTest.java
+ org.hyperledger.fabric.samples.assettransfer.AssetTransferTest

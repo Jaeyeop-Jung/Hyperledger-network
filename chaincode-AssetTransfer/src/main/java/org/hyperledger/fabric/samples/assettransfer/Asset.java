@@ -60,6 +60,10 @@ public class Asset {
         return Objects.hash(this.getAssetId(), getOwner(), getCoin(), getSender(), getReceiver(), getAmount());
     }
 
+    public void changeOwner(String owner){
+        this.owner = owner;
+    }
+
     public void createCoin(String coinName){
         coin.put(coinName, "0");
     }
