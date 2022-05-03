@@ -208,5 +208,23 @@ public class AssetTransferTest {
         assertThat(response).isTrue();
     }
 
+    @Test
+    public void CreateCoin_을_테스트한다() throws JsonProcessingException {
+        //given
+        AssetTransfer contract = new AssetTransfer();
+        Context ctx = mock(Context.class);
+        ChaincodeStub stub = mock(ChaincodeStub.class);
 
+        when(ctx.getStub()).thenReturn(stub);
+        when(stub.getStringState("asset1"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "test", new HashMap<>(), null, null, null)));
+
+        //when
+        boolean response = contract.CreateCoin(ctx, "test");
+
+        //then
+        verify(stub).getStringState("asset1");
+        assertThat(response).isTrue();
+
+    }
 }
