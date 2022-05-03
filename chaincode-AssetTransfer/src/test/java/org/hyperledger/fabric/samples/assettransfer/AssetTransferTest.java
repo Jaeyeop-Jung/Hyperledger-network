@@ -7,12 +7,15 @@ import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ThrowableAssert;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.shim.ChaincodeStub;
+import org.hyperledger.fabric.shim.ledger.KeyValue;
+import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 
 import java.util.HashMap;
+import java.util.Iterator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -218,7 +221,49 @@ public class AssetTransferTest {
         when(ctx.getStub()).thenReturn(stub);
         when(stub.getStringState("asset1"))
                 .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStateByRange("", "")).thenReturn(new QueryResultsIterator<KeyValue>() {
+            @Override
+            public void close() throws Exception {
 
+            }
+
+            @Override
+            public Iterator<KeyValue> iterator() {
+                Iterator<KeyValue> keyValueIterator = new Iterator<>() {
+                    @Override
+                    public boolean hasNext() {
+                        return false;
+                    }
+
+                    @Override
+                    public KeyValue next() {
+                        KeyValue keyValue = new KeyValue() {
+                            @Override
+                            public String getKey() {
+                                return null;
+                            }
+
+                            @Override
+                            public byte[] getValue() {
+                                return new byte[0];
+                            }
+
+                            @Override
+                            public String getStringValue() {
+                                try {
+                                    return objectMapper.writeValueAsString(Asset.of("asset1", "test", new HashMap<>(), null, null, null));
+                                } catch (JsonProcessingException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }
+                        };
+                        return null;
+                    }
+                };
+                return keyValueIterator;
+            }
+        });
         //when
         boolean response = contract.CreateCoin(ctx, "test");
 
@@ -227,4 +272,31 @@ public class AssetTransferTest {
         assertThat(response).isTrue();
 
     }
+
+    @Test
+    public void TransferCoin_을_테스트한다() throws JsonProcessingException {
+        //given
+        AssetTransfer contract = new AssetTransfer();
+        Context ctx = mock(Context.class);
+        ChaincodeStub stub = mock(ChaincodeStub.class);
+
+        HashMap<String, String> coin = new HashMap<>();
+        coin.put("test", "100");
+        when(ctx.getStub()).thenReturn(stub);
+        when(stub.getStringState("asset1"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "test1", coin, null, null, null)));
+        when(stub.getStringState("asset2"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset2", "test2", coin, null, null, null)));
+
+        //when
+        Asset asset = contract.TransferCoin(ctx, "asset1", "asset2", "test", "100");
+
+        //then
+        verify(stub, times(3)).getStringState("asset1");
+        verify(stub, times(2)).getStringState("asset2");
+        assertThat(asset.getCoin().get("test")).isEqualTo("0");
+
+    }
+
+
 }

@@ -14,6 +14,7 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import exception.*;
+import io.grpc.netty.shaded.io.netty.util.internal.StringUtil;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -73,14 +74,25 @@ public final class AssetTransfer implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public boolean AssetExists(final Context ctx, final String assetId) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetId);
+        try {
+            if (assetId == null || assetId.contains(" ") || assetId.isEmpty() || assetId.isBlank()) {
+                String errorMessage = "assetId is null or empty or blank";
+                throw new EmptyValueException(errorMessage);
+            }
 
-        if(assetJSON == null || assetJSON.isEmpty()){
-            return false;
+            ChaincodeStub stub = ctx.getStub();
+            String assetJSON = stub.getStringState(assetId);
+
+            if (assetJSON == null || assetJSON.isEmpty()) {
+                return false;
+            }
+
+            return true;
+        } catch (EmptyValueException e){
+            System.out.println(e.getMessage());
         }
 
-        return true;
+        return false;
     }
 
     /**
@@ -284,6 +296,10 @@ public final class AssetTransfer implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public boolean CoinExists(final Context ctx, final String coinName) {
         try {
+            if(coinName == null || coinName.contains(" ") || coinName.isEmpty() || coinName.isBlank()){
+                String errorMessage = "coinName is null or empty or blank";
+                throw new EmptyValueException(errorMessage);
+            }
 
             ChaincodeStub stub = ctx.getStub();
 
@@ -294,9 +310,10 @@ public final class AssetTransfer implements ContractInterface {
 
             return true;
 
+        } catch (EmptyValueException e){
+            System.out.println(e.getMessage());
         } catch (JsonProcessingException e){
             System.out.println(e.getMessage());
-
         }
 
         return false;
@@ -314,6 +331,7 @@ public final class AssetTransfer implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public boolean CreateCoin(final Context ctx, final String coinName) {
         try {
+
             if(CoinExists(ctx, coinName)){
                 String errorMessage = String.format("Coin %s is already exists", coinName);
                 throw new AlreadyExistsCoinException(errorMessage);
@@ -480,9 +498,6 @@ public final class AssetTransfer implements ContractInterface {
             }
 
             ChaincodeStub stub = ctx.getStub();
-
-            AssetExists(ctx, senderAssetId);
-            AssetExists(ctx, receiverAssetId);
 
             Asset senderAsset = objectMapper.readValue(stub.getStringState(senderAssetId), Asset.class);
             Asset receiverAsset = objectMapper.readValue(stub.getStringState(receiverAssetId), Asset.class);
