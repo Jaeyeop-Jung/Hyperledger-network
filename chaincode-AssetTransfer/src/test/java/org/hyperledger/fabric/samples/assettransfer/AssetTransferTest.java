@@ -82,15 +82,16 @@ public class AssetTransferTest {
         AssetTransfer contract = new AssetTransfer();
         Context ctx = mock(Context.class);
         ChaincodeStub stub = mock(ChaincodeStub.class);
+        contract.InitLedger(ctx);
 
         when(ctx.getStub()).thenReturn(stub);
 
         //when
-        Asset asset = contract.CreateAsset(ctx, "asset1", "test");
+        Asset asset = contract.CreateAsset(ctx, "testAsset", "test");
 
         //then
         verify(stub).putStringState("asset1", objectMapper.writeValueAsString(asset));
-        assertThat(asset).isEqualTo(Asset.of("asset1", "test", new HashMap<>(), null, null, null));
+        assertThat(asset).isEqualTo(Asset.of("testAsset", "test", new HashMap<>(), null, null, null));
     }
 
     @Test

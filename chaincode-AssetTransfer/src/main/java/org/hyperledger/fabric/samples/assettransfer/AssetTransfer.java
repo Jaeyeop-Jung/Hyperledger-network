@@ -55,11 +55,11 @@ public final class AssetTransfer implements ContractInterface {
      * @param ctx the ctx
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void InitLedger(final Context ctx) {
+    public void InitLedger(final Context ctx) throws JsonProcessingException {
 
-        CreateAsset(ctx, "asset1", "안규보");
-        CreateAsset(ctx, "asset2", "정재엽");
-        CreateAsset(ctx, "asset3", "최영창");
+        ChaincodeStub stub = ctx.getStub();
+        Asset asset = new Asset("asset1","rootOwner",new HashMap<String ,String>(), null,null,null);
+        stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
 
     }
 
@@ -123,6 +123,13 @@ public final class AssetTransfer implements ContractInterface {
             }
 
             HashMap<String, String> coin = new HashMap<>();
+
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            HashMap<String, String> rootCoin = rootAsset.getCoin();
+
+            for (String key : rootCoin.keySet()) {
+                coin.put(key, "0");
+            }
 
             Asset asset = Asset.of(assetId, owner, coin, null, null, null);
             String assetJSON = objectMapper.writeValueAsString(asset);
@@ -562,4 +569,44 @@ public final class AssetTransfer implements ContractInterface {
 
         return null;
     }
+
+    /**
+     * methodName : DeleteCoin
+     * author : GB A
+     * description :
+     *
+     * @param ctx         the ctx
+     * @param delCoinName   the delcoinname
+     * @return null
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Asset DeleteCoin(final Context ctx, final String delCoinName) {
+
+        try {
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            for ( String coinName : rootAsset.getCoin().keySet()){
+                if (coinName.equals(delCoinName)){
+
+                    QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+
+                    for (KeyValue result: results) {
+                        Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
+                        asset.getCoin().remove(delCoinName);
+
+                        Asset asAsset = new Asset(asset.getAssetId(), asset.getOwner(), asset.getCoin() , asset.getSender() ,asset.getReceiver(), asset.getAmount());
+                        stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asAsset));
+                    }
+                    return null;
+                }
+            }
+            throw new ChaincodeException("Invalid CoinName");
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        }
+        return null;
+    }
+
 }
