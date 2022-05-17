@@ -46,7 +46,7 @@ public class AssetTransferTest {
         when(ctx.getStub()).thenReturn(stub);
 
         //when
-        boolean response = contract.AssetExists(ctx, "asset1");
+        boolean response = contract.AssetExists(ctx, "rootAsset");
 
         //then
         assertThat(response).isFalse();
@@ -60,14 +60,14 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
 
         //when
-       boolean response = contract.AssetExists(ctx, "asset1");
+       boolean response = contract.AssetExists(ctx, "rootAsset");
 
         //then
-        verify(stub).getStringState("asset1");
+        verify(stub).getStringState("rootAsset");
         assertThat(response).isTrue();
 
     }
@@ -82,8 +82,8 @@ public class AssetTransferTest {
         coin.put("test", "0");
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "rootOwner", coin, null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "rootOwner", coin, null, null, null)));
 
         //when
         Asset asset = contract.CreateAsset(ctx, "testAsset", "0","test");
@@ -100,11 +100,11 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
+        when(stub.getStringState("rootAsset"))
                 .thenReturn(null);
 
         //when
-        Asset asset = contract.GetAsset(ctx, "asset1");
+        Asset asset = contract.GetAsset(ctx, "rootAsset");
 
         //then
         assertThat(asset).isNull();
@@ -119,15 +119,15 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
 
         //when
-        Asset asset = contract.GetAsset(ctx, "asset1");
+        Asset asset = contract.GetAsset(ctx, "rootAsset");
 
         //then
-        verify(stub, times(2)).getStringState("asset1");
-        assertThat(asset).isEqualTo(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null));
+        verify(stub, times(2)).getStringState("rootAsset");
+        assertThat(asset).isEqualTo(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null));
     }
 
     @Test
@@ -138,14 +138,14 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
 
         //when
-        Asset asset = contract.ChangeOwner(ctx, "asset1", "newTest");
+        Asset asset = contract.ChangeOwner(ctx, "rootAsset", "newTest");
 
         //then
-        verify(stub, times(2)).getStringState("asset1");
+        verify(stub, times(2)).getStringState("rootAsset");
         assertThat(asset.getOwner()).isEqualTo("newTest");
     }
 
@@ -157,19 +157,19 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0","test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
 
         //when
-        boolean response = contract.DeleteAsset(ctx, "asset1");
+        boolean response = contract.DeleteAsset(ctx, "rootAsset");
 
         //then
-        verify(stub).getStringState("asset1");
-        verify(stub).delState("asset1");
+        verify(stub).getStringState("rootAsset");
+        verify(stub).delState("rootAsset");
         assertThat(response).isTrue();
-        
+
     }
-    
+
     @Test
     public void CoinExists_으로_없는_코인_을_테스트한다() throws JsonProcessingException {
         //given
@@ -178,14 +178,14 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
 
         //when
         boolean response = contract.CoinExists(ctx, "test");
 
         //then
-        verify(stub).getStringState("asset1");
+        verify(stub).getStringState("rootAsset");
         assertThat(response).isFalse();
     }
 
@@ -199,14 +199,14 @@ public class AssetTransferTest {
         HashMap<String, String> coin = new HashMap<>();
         coin.put("test", "0");
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", coin, null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", coin, null, null, null)));
 
         //when
         boolean response = contract.CoinExists(ctx, "test");
 
         //then
-        verify(stub).getStringState("asset1");
+        verify(stub).getStringState("rootAsset");
         assertThat(response).isTrue();
     }
 
@@ -218,8 +218,8 @@ public class AssetTransferTest {
         ChaincodeStub stub = mock(ChaincodeStub.class);
 
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
         when(stub.getStateByRange("", "")).thenReturn(new QueryResultsIterator<KeyValue>() {
             @Override
             public void close() throws Exception {
@@ -250,7 +250,7 @@ public class AssetTransferTest {
                             @Override
                             public String getStringValue() {
                                 try {
-                                    return objectMapper.writeValueAsString(Asset.of("asset1", "0", "test", new HashMap<>(), null, null, null));
+                                    return objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null));
                                 } catch (JsonProcessingException e) {
                                     e.printStackTrace();
                                 }
@@ -267,7 +267,7 @@ public class AssetTransferTest {
         boolean response = contract.CreateCoin(ctx, "test");
 
         //then
-        verify(stub).getStringState("asset1");
+        verify(stub).getStringState("rootAsset");
         assertThat(response).isTrue();
 
     }
@@ -282,16 +282,16 @@ public class AssetTransferTest {
         HashMap<String, String> coin = new HashMap<>();
         coin.put("test", "100");
         when(ctx.getStub()).thenReturn(stub);
-        when(stub.getStringState("asset1"))
-                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "0", "test1", coin, null, null, null)));
+        when(stub.getStringState("rootAsset"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test1", coin, null, null, null)));
         when(stub.getStringState("asset2"))
                 .thenReturn(objectMapper.writeValueAsString(Asset.of("asset2", "0", "test2", coin, null, null, null)));
 
         //when
-        TransferResponse transferResponse = contract.TransferCoin(ctx, "asset1", "asset2", "test", "100");
+        TransferResponse transferResponse = contract.TransferCoin(ctx, "rootAsset", "asset2", "test", "100");
 
         //then
-        verify(stub, times(3)).getStringState("asset1");
+        verify(stub, times(3)).getStringState("rootAsset");
         verify(stub, times(2)).getStringState("asset2");
         assertThat(transferResponse.getCoinName()).isEqualTo("test");
         assertThat(transferResponse.getAmount()).isEqualTo("100");

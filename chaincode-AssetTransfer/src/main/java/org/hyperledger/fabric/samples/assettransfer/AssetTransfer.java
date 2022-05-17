@@ -58,7 +58,7 @@ public final class AssetTransfer implements ContractInterface {
     public void InitLedger(final Context ctx) throws JsonProcessingException {
 
         ChaincodeStub stub = ctx.getStub();
-        Asset asset = new Asset("asset1","0", "rootOwner",new HashMap<String ,String>(), null,null,null);
+        Asset asset = new Asset("rootAsset","0", "rootOwner",new HashMap<String ,String>(), null,null,null);
         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
 
     }
@@ -125,7 +125,7 @@ public final class AssetTransfer implements ContractInterface {
 
             HashMap<String, String> coin = new HashMap<>();
 
-            Asset rootAsset = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
             HashMap<String, String> rootCoin = rootAsset.getCoin();
 
             for (String key : rootCoin.keySet()) {
@@ -311,7 +311,7 @@ public final class AssetTransfer implements ContractInterface {
 
             ChaincodeStub stub = ctx.getStub();
 
-            Asset root = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            Asset root = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
             if(!root.getCoin().containsKey(coinName)){
                 return false;
             }
@@ -418,7 +418,7 @@ public final class AssetTransfer implements ContractInterface {
 
             ChaincodeStub stub = ctx.getStub();
 
-            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "");
+            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "rootAsset");
 
             for (KeyValue keyValue : assetIdIter) {
                 Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
@@ -591,7 +591,7 @@ public final class AssetTransfer implements ContractInterface {
         try {
             ChaincodeStub stub = ctx.getStub();
 
-            Asset rootAsset = objectMapper.readValue(stub.getStringState("asset1"), Asset.class);
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
             for ( String coinName : rootAsset.getCoin().keySet()){
                 if (coinName.equals(delCoinName)){
 
