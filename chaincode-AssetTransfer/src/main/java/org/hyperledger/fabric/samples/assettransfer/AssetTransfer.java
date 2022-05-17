@@ -276,7 +276,7 @@ public final class AssetTransfer implements ContractInterface {
             // Giving empty startKey & endKey is interpreted as all the keys from beginning to end.
             // As another example, if you use startKey = 'asset0', endKey = 'asset9' ,
             // then getStateByRange will retrieve asset with keys between asset0 (inclusive) and asset9 (exclusive) in lexical order.
-            QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+            QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "rootAsset");
 
             for (KeyValue result: results) {
                 Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
