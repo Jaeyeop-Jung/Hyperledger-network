@@ -20,6 +20,9 @@ public class Asset {
     private String assetId;
 
     @Property()
+    private String studentId;
+
+    @Property()
     private String owner;
 
     @Property()
@@ -34,12 +37,13 @@ public class Asset {
     @Property()
     private String amount;
 
-    public static Asset of(final String assetId, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
-        return new Asset(assetId, owner, coin, sender, receiver, amount);
+    public static Asset of(final String assetId, final String studentId, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
+        return new Asset(assetId, studentId, owner, coin, sender, receiver, amount);
     }
 
-    public Asset(String assetId, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
+    public Asset(String assetId, String studentId, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
         this.assetId = assetId;
+        this.studentId = studentId;
         this.owner = owner;
         this.coin = coin;
         this.sender = sender;
