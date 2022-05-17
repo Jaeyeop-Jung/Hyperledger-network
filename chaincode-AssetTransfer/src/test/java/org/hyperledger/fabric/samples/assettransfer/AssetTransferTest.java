@@ -2,20 +2,16 @@ package org.hyperledger.fabric.samples.assettransfer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import exception.AssetNotFoundException;
-import org.assertj.core.api.Assertions;
-import org.assertj.core.api.ThrowableAssert;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.mockito.verification.VerificationMode;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -82,16 +78,18 @@ public class AssetTransferTest {
         AssetTransfer contract = new AssetTransfer();
         Context ctx = mock(Context.class);
         ChaincodeStub stub = mock(ChaincodeStub.class);
-        contract.InitLedger(ctx);
+        HashMap<String, String> coin = new HashMap<>();
+        coin.put("test", "0");
 
         when(ctx.getStub()).thenReturn(stub);
+        when(stub.getStringState("asset1"))
+                .thenReturn(objectMapper.writeValueAsString(Asset.of("asset1", "rootOwner", coin, null, null, null)));
 
         //when
         Asset asset = contract.CreateAsset(ctx, "testAsset", "test");
 
         //then
-        verify(stub).putStringState("asset1", objectMapper.writeValueAsString(asset));
-        assertThat(asset).isEqualTo(Asset.of("testAsset", "test", new HashMap<>(), null, null, null));
+        assertThat(asset).isEqualTo(Asset.of("testAsset", "test", coin, null, null, null));
     }
 
     @Test
