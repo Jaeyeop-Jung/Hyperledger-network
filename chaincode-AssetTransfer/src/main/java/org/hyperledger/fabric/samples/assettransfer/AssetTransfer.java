@@ -58,7 +58,7 @@ public final class AssetTransfer implements ContractInterface {
     public void InitLedger(final Context ctx) throws JsonProcessingException {
 
         ChaincodeStub stub = ctx.getStub();
-        Asset asset = new Asset("asset1","rootOwner",new HashMap<String ,String>(), null,null,null);
+        Asset asset = new Asset("asset1","0", "rootOwner",new HashMap<String ,String>(), null,null,null);
         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
 
     }
@@ -109,6 +109,7 @@ public final class AssetTransfer implements ContractInterface {
     public Asset CreateAsset (
             final Context ctx,
             final String assetId,
+            final String studentId,
             final String owner
     )
     {
@@ -131,7 +132,7 @@ public final class AssetTransfer implements ContractInterface {
                 coin.put(key, "0");
             }
 
-            Asset asset = Asset.of(assetId, owner, coin, null, null, null);
+            Asset asset = Asset.of(assetId, studentId, owner, coin, null, null, null);
             String assetJSON = objectMapper.writeValueAsString(asset);
             stub.putStringState(assetId, assetJSON);
 
@@ -489,7 +490,7 @@ public final class AssetTransfer implements ContractInterface {
      * @return the coin
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
+    public TransferResponse TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
         try{
             if(!AssetExists(ctx, senderAssetId)){
                 String errorMessage = String.format("Asset %s is does not exists", senderAssetId);
@@ -515,7 +516,12 @@ public final class AssetTransfer implements ContractInterface {
             stub.putStringState(senderAssetId, objectMapper.writeValueAsString(senderAsset));
             stub.putStringState(receiverAssetId, objectMapper.writeValueAsString(receiverAsset));
 
-            return senderAsset;
+            return TransferResponse.builder()
+                    .senderStudentId(senderAsset.getStudentId())
+                    .receiverStudentId(receiverAsset.getStudentId())
+                    .coinName(coinName)
+                    .amount(amount)
+                    .build();
         } catch (AssetNotFoundException e){
             System.out.println(e.getMessage());
         } catch (CoinNotFoundException e){
@@ -595,7 +601,7 @@ public final class AssetTransfer implements ContractInterface {
                         Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
                         asset.getCoin().remove(delCoinName);
 
-                        Asset asAsset = new Asset(asset.getAssetId(), asset.getOwner(), asset.getCoin() , asset.getSender() ,asset.getReceiver(), asset.getAmount());
+                        Asset asAsset = new Asset(asset.getAssetId(), asset.getStudentId(), asset.getOwner(), asset.getCoin() , asset.getSender() ,asset.getReceiver(), asset.getAmount());
                         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asAsset));
                     }
                     return null;
