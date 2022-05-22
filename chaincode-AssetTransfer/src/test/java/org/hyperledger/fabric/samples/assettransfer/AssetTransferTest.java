@@ -288,13 +288,13 @@ public class AssetTransferTest {
                 .thenReturn(objectMapper.writeValueAsString(Asset.of("asset2", "0", "test2", coin, null, null, null)));
 
         //when
-        TransferResponse transferResponse = contract.TransferCoin(ctx, "rootAsset", "asset2", "test", "100");
+        String transferResponse = contract.TransferCoin(ctx, "rootAsset", "asset2", "test", "100");
 
         //then
         verify(stub, times(3)).getStringState("rootAsset");
         verify(stub, times(2)).getStringState("asset2");
-        assertThat(transferResponse.getCoinName()).isEqualTo("test");
-        assertThat(transferResponse.getAmount()).isEqualTo("100");
+        assertThat(objectMapper.readValue(transferResponse, TransferResponse.class).getCoinName()).isEqualTo("test");
+        assertThat(objectMapper.readValue(transferResponse, TransferResponse.class).getAmount()).isEqualTo("100");
 
     }
 

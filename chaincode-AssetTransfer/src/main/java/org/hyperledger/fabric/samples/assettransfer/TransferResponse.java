@@ -9,16 +9,16 @@ public class TransferResponse {
 
     private String senderStudentId;
 
-    private String receiverStudentId;
+    private String receiverStudentIdOrPhoneNumber;
 
     private String coinName;
 
     private String amount;
 
     @Builder
-    public TransferResponse(String senderStudentId, String receiverStudentId, String coinName, String amount) {
+    public TransferResponse(String senderStudentId, String receiverStudentIdOrPhoneNumber, String coinName, String amount) {
         this.senderStudentId = senderStudentId;
-        this.receiverStudentId = receiverStudentId;
+        this.receiverStudentIdOrPhoneNumber = receiverStudentIdOrPhoneNumber;
         this.coinName = coinName;
         this.amount = amount;
     }

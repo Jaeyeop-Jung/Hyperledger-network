@@ -490,7 +490,7 @@ public final class AssetTransfer implements ContractInterface {
      * @return the coin
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public TransferResponse TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
+    public String TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
         try{
             if(!AssetExists(ctx, senderAssetId)){
                 String errorMessage = String.format("Asset %s is does not exists", senderAssetId);
@@ -516,12 +516,14 @@ public final class AssetTransfer implements ContractInterface {
             stub.putStringState(senderAssetId, objectMapper.writeValueAsString(senderAsset));
             stub.putStringState(receiverAssetId, objectMapper.writeValueAsString(receiverAsset));
 
-            return TransferResponse.builder()
+            return objectMapper.writeValueAsString(
+                    TransferResponse.builder()
                     .senderStudentId(senderAsset.getStudentId())
-                    .receiverStudentId(receiverAsset.getStudentId())
+                    .receiverStudentIdOrPhoneNumber(receiverAsset.getStudentId())
                     .coinName(coinName)
                     .amount(amount)
-                    .build();
+                    .build());
+
         } catch (AssetNotFoundException e){
             System.out.println(e.getMessage());
         } catch (CoinNotFoundException e){
