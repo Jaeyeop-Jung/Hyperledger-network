@@ -518,6 +518,7 @@ public final class AssetTransfer implements ContractInterface {
 
             return objectMapper.writeValueAsString(
                     TransferResponse.builder()
+                            .transactionId(stub.getTxId())
                     .senderStudentId(senderAsset.getStudentId())
                     .receiverStudentIdOrPhoneNumber(receiverAsset.getStudentId())
                     .coinName(coinName)

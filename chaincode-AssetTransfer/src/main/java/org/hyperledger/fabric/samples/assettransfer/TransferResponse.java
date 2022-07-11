@@ -7,6 +7,7 @@ import lombok.*;
 @ToString
 public class TransferResponse {
 
+    private String transactionId;
     private String senderStudentId;
 
     private String receiverStudentIdOrPhoneNumber;
@@ -16,7 +17,8 @@ public class TransferResponse {
     private String amount;
 
     @Builder
-    public TransferResponse(String senderStudentId, String receiverStudentIdOrPhoneNumber, String coinName, String amount) {
+    public TransferResponse(String transactionId, String senderStudentId, String receiverStudentIdOrPhoneNumber, String coinName, String amount) {
+        this.transactionId = transactionId;
         this.senderStudentId = senderStudentId;
         this.receiverStudentIdOrPhoneNumber = receiverStudentIdOrPhoneNumber;
         this.coinName = coinName;
