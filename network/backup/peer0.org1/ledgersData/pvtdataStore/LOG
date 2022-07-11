@@ -1,0 +1,74 @@
+=============== Apr 4, 2022 (UTC) ===============
+12:24:58.018541 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:24:58.022827 db@open opening
+12:24:58.023148 version@stat F·[] S·0B[] Sc·[]
+12:24:58.025610 db@janitor F·2 G·0
+12:24:58.025627 db@open done T·2.751369ms
+=============== Apr 4, 2022 (UTC) ===============
+12:33:50.415714 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:33:50.428444 version@stat F·[] S·0B[] Sc·[]
+12:33:50.430425 db@open opening
+12:33:50.431686 journal@recovery F·1
+12:33:50.433226 journal@recovery recovering @1
+12:33:50.444455 memdb@flush created L0@2 N·11 S·603B "myc..l\x00\x01,v11":"myc..l\x00\a,d1"
+12:33:50.451170 version@stat F·[1] S·603B[603B] Sc·[0.25]
+12:33:50.491387 db@janitor F·3 G·0
+12:33:50.492369 db@open done T·60.9352ms
+=============== Apr 4, 2022 (UTC) ===============
+12:40:19.281402 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:40:19.294847 version@stat F·[1] S·603B[603B] Sc·[0.25]
+12:40:19.295700 db@open opening
+12:40:19.296887 journal@recovery F·1
+12:40:19.297661 journal@recovery recovering @3
+12:40:19.312457 memdb@flush created L0@5 N·1 S·126B "myc..l\x00\a,d13":"myc..l\x00\a,d13"
+12:40:19.316131 version@stat F·[2] S·729B[729B] Sc·[0.50]
+12:40:19.341739 db@janitor F·4 G·0
+12:40:19.342737 db@open done T·46.156145ms
+=============== Apr 7, 2022 (UTC) ===============
+00:07:25.635379 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+00:07:25.646959 version@stat F·[2] S·729B[729B] Sc·[0.50]
+00:07:25.647912 db@open opening
+00:07:25.648687 journal@recovery F·1
+00:07:25.650419 journal@recovery recovering @6
+00:07:25.663390 memdb@flush created L0@8 N·1 S·126B "myc..l\x00\a,d15":"myc..l\x00\a,d15"
+00:07:25.666693 version@stat F·[3] S·855B[855B] Sc·[0.75]
+00:07:25.689068 db@janitor F·5 G·0
+00:07:25.689924 db@open done T·41.621625ms
+=============== Apr 7, 2022 (UTC) ===============
+00:11:55.205756 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+00:11:55.224780 version@stat F·[3] S·855B[855B] Sc·[0.75]
+00:11:55.225511 db@open opening
+00:11:55.226535 journal@recovery F·1
+00:11:55.227379 journal@recovery recovering @9
+00:11:55.244302 memdb@flush created L0@11 N·1 S·126B "myc..l\x00\a,d17":"myc..l\x00\a,d17"
+00:11:55.248461 version@stat F·[4] S·981B[981B] Sc·[1.00]
+00:11:55.274399 db@janitor F·6 G·0
+00:11:55.276409 db@open done T·50.043919ms
+00:11:55.276603 table@compaction L0·4 -> L1·0 S·981B Q·18
+00:11:55.318368 table@build created L1@14 N·3 S·538B "myc..l\x00\x01,v11":"myc..\x00\a\xfb,v7"
+00:11:55.321234 version@stat F·[0 1] S·538B[0B 538B] Sc·[0.00 0.00]
+00:11:55.325504 table@compaction committed F-3 S-443B Ke·0 D·11 T·26.895664ms
+00:11:55.327985 table@remove removed @8
+00:11:55.331716 table@remove removed @5
+00:11:55.338713 table@remove removed @2
+=============== Apr 7, 2022 (UTC) ===============
+00:13:48.573549 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+00:13:48.595044 version@stat F·[0 1] S·538B[0B 538B] Sc·[0.00 0.00]
+00:13:48.596220 db@open opening
+00:13:48.597554 journal@recovery F·1
+00:13:48.598673 journal@recovery recovering @12
+00:13:48.616351 memdb@flush created L0@15 N·1 S·126B "myc..l\x00\a,d19":"myc..l\x00\a,d19"
+00:13:48.619960 version@stat F·[1 1] S·664B[126B 538B] Sc·[0.25 0.00]
+00:13:48.652412 db@janitor F·5 G·1
+00:13:48.653707 db@janitor removing table-11
+00:13:48.657025 db@open done T·59.7661ms
+=============== Apr 7, 2022 (UTC) ===============
+01:00:21.950155 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+01:00:21.965958 version@stat F·[1 1] S·664B[126B 538B] Sc·[0.25 0.00]
+01:00:21.969112 db@open opening
+01:00:21.970161 journal@recovery F·1
+01:00:21.970985 journal@recovery recovering @16
+01:00:21.985731 memdb@flush created L0@18 N·1 S·126B "myc..l\x00\a,d21":"myc..l\x00\a,d21"
+01:00:21.990131 version@stat F·[2 1] S·790B[252B 538B] Sc·[0.50 0.00]
+01:00:22.026742 db@janitor F·5 G·0
+01:00:22.027760 db@open done T·57.9165ms

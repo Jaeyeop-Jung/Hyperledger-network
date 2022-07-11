@@ -4,6 +4,7 @@
 
 package org.hyperledger.fabric.samples.assettransfer;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +13,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import exception.*;
+import io.grpc.netty.shaded.io.netty.util.internal.StringUtil;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -25,8 +28,6 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyModification;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
-
-import com.owlike.genson.Genson;
 
 @Contract(
         name = "basic",
@@ -44,290 +45,577 @@ import com.owlike.genson.Genson;
 @Default
 public final class AssetTransfer implements ContractInterface {
 
-    private final Genson genson = new Genson();
-
-    private enum AssetTransferErrors {
-        ASSET_NOT_FOUND,
-        ASSET_ALREADY_EXISTS
-    }
+    private final static ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Creates some initial assets on the ledger.
+     * methodName : InitLedger
+     * author : 공용
+     * description : 체인코드 테스트용 메소드
      *
-     * @param ctx the transaction context
+     * @param ctx the ctx
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void InitLedger(final Context ctx) {
+    public void InitLedger(final Context ctx) throws JsonProcessingException {
+
         ChaincodeStub stub = ctx.getStub();
-
-        HashMap<String, String> initCoin = new HashMap<>();
-        initCoin.put("init", "-1");
-
-        CreateAsset(ctx, "asset1", "blue", 5, "Tomoko", 300, initCoin);
-        CreateAsset(ctx, "asset2", "red", 5, "Brad", 400, initCoin);
-        CreateAsset(ctx, "asset3", "green", 10, "Jin Soo", 500, initCoin);
-        CreateAsset(ctx, "asset4", "yellow", 10, "Max", 600, initCoin);
-        CreateAsset(ctx, "asset5", "black", 15, "Adrian", 700, initCoin);
-        CreateAsset(ctx, "asset6", "white", 15, "Michel", 700, initCoin);
+        Asset asset = new Asset("rootAsset","0", "rootOwner",new HashMap<String ,String>(), null,null,null);
+        stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
 
     }
 
     /**
-     * Creates a new asset on the ledger.
+     * methodName : AssetExists
+     * author : 공용
+     * description : Asset 존재 확인
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the new asset
-     * @param color the color of the new asset
-     * @param size the size for the new asset
-     * @param owner the owner of the new asset
-     * @param appraisedValue the appraisedValue of the new asset
-     * @return the created asset
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset CreateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue, final HashMap coin) {
-        ChaincodeStub stub = ctx.getStub();
-
-        if (AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s already exists", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
-        }
-
-        Asset asset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String assetJSON = genson.serialize(asset);
-        stub.putStringState(assetID, assetJSON);
-
-        return asset;
-    }
-
-    /**
-     * Retrieves an asset with the specified ID from the ledger.
-     *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset
-     * @return the asset found on the ledger if there was one
+     * @param ctx     the ctx
+     * @param assetId the asset id
+     * @return the boolean
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public Asset ReadAsset(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetID);
+    public boolean AssetExists(final Context ctx, final String assetId) {
+        try {
+            if (assetId == null || assetId.contains(" ") || assetId.isEmpty() || assetId.isBlank()) {
+                String errorMessage = "assetId is null or empty or blank";
+                throw new EmptyValueException(errorMessage);
+            }
 
-        if (assetJSON == null || assetJSON.isEmpty()) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            ChaincodeStub stub = ctx.getStub();
+            String assetJSON = stub.getStringState(assetId);
+
+            if (assetJSON == null || assetJSON.isEmpty()) {
+                return false;
+            }
+
+            return true;
+        } catch (EmptyValueException e){
+            System.out.println(e.getMessage());
         }
 
-        Asset asset = genson.deserialize(assetJSON, Asset.class);
-        return asset;
+        return false;
     }
 
     /**
-     * Updates the properties of an asset on the ledger.
+     * methodName : CreateAsset
+     * author : 공용
+     * description : Asset 생성
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being updated
-     * @param color the color of the asset being updated
-     * @param size the size of the asset being updated
-     * @param owner the owner of the asset being updated
-     * @param appraisedValue the appraisedValue of the asset being updated
-     * @return the transferred asset
+     * @param ctx     the ctx
+     * @param assetId the asset id
+     * @param owner   the owner
+     * @return created Asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset UpdateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue, final HashMap coin) {
-        ChaincodeStub stub = ctx.getStub();
+    public Asset CreateAsset (
+            final Context ctx,
+            final String assetId,
+            final String studentId,
+            final String owner
+    )
+    {
 
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+        try {
+
+            ChaincodeStub stub = ctx.getStub();
+
+            if(AssetExists(ctx, assetId)){
+                String errorMessage = String.format("Asset %s already exists", assetId);
+                throw new AlreadyExistAssetException(errorMessage);
+            }
+
+            HashMap<String, String> coin = new HashMap<>();
+
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            HashMap<String, String> rootCoin = rootAsset.getCoin();
+
+            for (String key : rootCoin.keySet()) {
+                coin.put(key, "0");
+            }
+
+            Asset asset = Asset.of(assetId, studentId, owner, coin, null, null, null);
+            String assetJSON = objectMapper.writeValueAsString(asset);
+            stub.putStringState(assetId, assetJSON);
+
+            return asset;
+
+        } catch (AlreadyExistAssetException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String newAssetJSON = genson.serialize(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
-
-        return newAsset;
+        return null;
     }
 
-    /**
-     * Deletes asset on the ledger.
-     *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being deleted
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void DeleteAsset(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
-
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
-        }
-
-        stub.delState(assetID);
-    }
 
     /**
-     * Checks the existence of the asset on the ledger
+     * methodName : GetAsset
+     * author : 공용
+     * description : Asset 읽기
      *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset
-     * @return boolean indicating the existence of the asset
+     * @param ctx     the ctx
+     * @param assetId the asset id
+     * @return the asset
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public boolean AssetExists(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetID);
+    public Asset GetAsset(final Context ctx, final String assetId) {
+        try{
+            if(!AssetExists(ctx, assetId)){
+                String errorMessage = String.format("Asset %s does not exist", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
 
-        return (assetJSON != null && !assetJSON.isEmpty());
-    }
+            ChaincodeStub stub = ctx.getStub();
+            String assetJSON = stub.getStringState(assetId);
 
-    /**
-     * Changes the owner of a asset on the ledger.
-     *
-     * @param ctx the transaction context
-     * @param assetID the ID of the asset being transferred
-     * @param newOwner the new owner
-     * @return the updated asset
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset TransferAsset(final Context ctx, final String assetID, final String newOwner) {
-        ChaincodeStub stub = ctx.getStub();
-        String assetJSON = stub.getStringState(assetID);
+            Asset asset = objectMapper.readValue(assetJSON, Asset.class);
 
-        if (assetJSON == null || assetJSON.isEmpty()) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            return asset;
+
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        Asset asset = genson.deserialize(assetJSON, Asset.class);
-
-        Asset newAsset = new Asset(asset.getAssetID(), asset.getColor(), asset.getSize(), newOwner, asset.getAppraisedValue(), asset.getCoin());
-        String newAssetJSON = genson.serialize(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
-
-        return newAsset;
+        return null;
     }
 
+
     /**
-     * Retrieves all assets from the ledger.
+     * methodName : ChangeOwner
+     * author : Jaeyeop Jung
+     * description : *
      *
-     * @param ctx the transaction context
-     * @return array of assets found on the ledger
+     * @param ctx          the ctx
+     * @param assetId      the asset id
+     * @param newOwner the new owner name
+     * @return 수정된 Asset
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Asset ChangeOwner(
+            final Context ctx,
+            final String assetId,
+            final String newOwner
+    )
+    {
+        try {
+            if(!AssetExists(ctx, assetId)){
+                String errorMessage = String.format("Asset %s does not exist", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
+            asset.changeOwner(newOwner);
+
+            stub.putStringState(assetId, objectMapper.writeValueAsString(asset));
+
+            return asset;
+
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("readValue Exception: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+
+    /**
+     * methodName : DeleteAsset
+     * author : 공용
+     * description : Asset 삭제
+     *
+     * @param ctx     the ctx
+     * @param assetId the asset id
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public boolean DeleteAsset(final Context ctx, final String assetId) {
+        try {
+            if (!AssetExists(ctx, assetId)) {
+                String errorMessage = String.format("Asset %s does not exist", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            stub.delState(assetId);
+
+            return true;
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
+
+
+    /**
+     * methodName : GetAllAssets
+     * author : 공용
+     * description : 모든 Asset 조회
+     *
+     * @param ctx the ctx
+     * @return the string
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String GetAllAssets(final Context ctx) {
-        ChaincodeStub stub = ctx.getStub();
 
-        List<Asset> queryResults = new ArrayList<Asset>();
+        try {
 
-        // To retrieve all assets from the ledger use getStateByRange with empty startKey & endKey.
-        // Giving empty startKey & endKey is interpreted as all the keys from beginning to end.
-        // As another example, if you use startKey = 'asset0', endKey = 'asset9' ,
-        // then getStateByRange will retrieve asset with keys between asset0 (inclusive) and asset9 (exclusive) in lexical order.
-        QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+            ChaincodeStub stub = ctx.getStub();
 
-        for (KeyValue result: results) {
-            Asset asset = genson.deserialize(result.getStringValue(), Asset.class);
-            queryResults.add(asset);
-            System.out.println(asset.toString());
+            List<Asset> queryResults = new ArrayList<>();
+
+            // To retrieve all assets from the ledger use getStateByRange with empty startKey & endKey.
+            // Giving empty startKey & endKey is interpreted as all the keys from beginning to end.
+            // As another example, if you use startKey = 'asset0', endKey = 'asset9' ,
+            // then getStateByRange will retrieve asset with keys between asset0 (inclusive) and asset9 (exclusive) in lexical order.
+            QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "rootAsset");
+
+            for (KeyValue result: results) {
+                Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
+                queryResults.add(asset);
+            }
+
+            return objectMapper.writeValueAsString(queryResults);
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        final String response = genson.serialize(queryResults);
+        return null;
+    }
 
-        return response;
+    /**
+     * methodName : CoinExists
+     * author : Jaeyeop Jung
+     * description : 현재 존재하는 코인 확인
+     *
+     * @param ctx      the ctx
+     * @param coinName the coin name
+     * @return the exists
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean CoinExists(final Context ctx, final String coinName) {
+        try {
+            if(coinName == null || coinName.contains(" ") || coinName.isEmpty() || coinName.isBlank()){
+                String errorMessage = "coinName is null or empty or blank";
+                throw new EmptyValueException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset root = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            if(!root.getCoin().containsKey(coinName)){
+                return false;
+            }
+
+            return true;
+
+        } catch (EmptyValueException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e){
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * methodName : CreateCoin
+     * author : Jaeyeop Jung
+     * description : 모든 Asset의 코인 생성
+     *
+     * @param ctx      the ctx
+     * @param coinName the coin name
+     * @return 생성 여부
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public boolean CreateCoin(final Context ctx, final String coinName) {
+        try {
+
+            if(CoinExists(ctx, coinName)){
+                String errorMessage = String.format("Coin %s is already exists", coinName);
+                throw new AlreadyExistsCoinException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            QueryResultsIterator<KeyValue> assetIter = stub.getStateByRange("", "");
+
+            for (KeyValue keyValue : assetIter) {
+                Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
+                asset.createCoin(coinName);
+                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
+            }
+
+            return true;
+
+        } catch (AlreadyExistsCoinException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * methodName : RemoveCoin
+     * author : Jaeyeop Jung
+     * description : 모든 Asset의 코인 삭제
+     *
+     * @param ctx      the ctx
+     * @param coinName the coin name
+     * @return the boolean
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public boolean RemoveCoin(final Context ctx, final String coinName) {
+        try {
+            if(!CoinExists(ctx, coinName)){
+                String errorMessage = String.format("Coin %s is does not exists", coinName);
+                throw new CoinNotFoundException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "");
+
+            for (KeyValue keyValue : assetIdIter) {
+                Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
+                asset.removeCoin(coinName);
+                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
+            }
+
+            return true;
+
+        } catch (CoinNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        }
+
+        return false;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String CreateCoin(final Context ctx, final String assetID, final String coinName, final String coinValue) throws JsonProcessingException {
-        ChaincodeStub stub = ctx.getStub();
-        ObjectMapper objectMapper = new ObjectMapper();
+    public boolean UpdateAllAssetCoin(
+            final Context ctx,
+            final String coinName,
+            final String coinValue
+    ) {
+        try {
+            if(!CoinExists(ctx, coinName)){
+                String errorMessage = String.format("Coin %s is does not exists", coinName);
+                throw new CoinNotFoundException(errorMessage);
+            }
 
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            ChaincodeStub stub = ctx.getStub();
+
+            QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "rootAsset");
+
+            for (KeyValue keyValue : assetIdIter) {
+                Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
+                asset.modifyCoinValue(null, null, coinName, coinValue);
+                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
+            }
+
+            return true;
+
+        } catch (CoinNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        byte[] state = stub.getState(assetID);
-        String stateToString = new String(state, StandardCharsets.UTF_8);
-
-        Map assetValueMap = objectMapper.readValue(stateToString, Map.class);
-
-        HashMap coin = objectMapper.convertValue(assetValueMap.get("coin"), HashMap.class);
-        coin.put(coinName, coinValue);
-
-        Asset newAsset = new Asset(
-                assetID,
-                String.valueOf(assetValueMap.get("color")),
-                Integer.parseInt(String.valueOf(assetValueMap.get("size"))),
-                String.valueOf(assetValueMap.get("owner")),
-                Integer.parseInt(String.valueOf(assetValueMap.get("appraisedValue"))),
-                coin
-        );
-        String newAssetJSON = genson.serialize(newAsset);
-//        String newAssetJSON = objectMapper.writeValueAsString(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
-
-        return newAssetJSON;
+        return false;
     }
-
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Asset UpdateCoin(final Context ctx, final String assetID, final String color, final int size,
-                            final String owner, final int appraisedValue, final HashMap coin, final String coinName, final long coinValue) {
-        ChaincodeStub stub = ctx.getStub();
+    public boolean UpdateAssetCoin(
+            final Context ctx,
+            final String assetId,
+            final String coinName,
+            final String coinValue
+    ) {
+        try {
 
-        if (!AssetExists(ctx, assetID)) {
-            String errorMessage = String.format("Asset %s does not exist", assetID);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
+            if(!AssetExists(ctx, assetId)){
+                String errorMessage = String.format("Asset %s is does not exists", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+            if(!CoinExists(ctx, coinName)){
+                String errorMessage = String.format("Coin %s is does not exists", coinName);
+                throw new CoinNotFoundException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            AssetExists(ctx, assetId);
+
+            Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
+            asset.modifyCoinValue(null, null, coinName, coinValue);
+
+            stub.putStringState(assetId, objectMapper.writeValueAsString(asset));
+
+            return true;
+
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (CoinNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
 
-        coin.replace(coinName, coinValue);
-
-        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue, coin);
-        String newAssetJSON = genson.serialize(newAsset);
-        stub.putStringState(assetID, newAssetJSON);
-
-        return newAsset;
+        return false;
     }
 
+
+    /**
+     * methodName : TransferCoin
+     * author : YoungChang Choi
+     * description :
+     *
+     * @param ctx         the ctx
+     * @param senderAssetId the from asset id
+     * @param receiverAssetId   the to asset id
+     * @param coinName    the coin name
+     * @param amount      the amount
+     * @return the coin
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String TransferCoin(final Context ctx, final String senderAssetId, final String receiverAssetId, final String coinName, final String amount) {
+        try{
+            if(!AssetExists(ctx, senderAssetId)){
+                String errorMessage = String.format("Asset %s is does not exists", senderAssetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+            if(!AssetExists(ctx, receiverAssetId)){
+                String errorMessage = String.format("Asset %s is does not exists", receiverAssetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
+            if(!CoinExists(ctx, coinName)){
+                String errorMessage = String.format("Coin %s is does not exists", coinName);
+                throw new CoinNotFoundException(errorMessage);
+            }
+
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset senderAsset = objectMapper.readValue(stub.getStringState(senderAssetId), Asset.class);
+            Asset receiverAsset = objectMapper.readValue(stub.getStringState(receiverAssetId), Asset.class);
+
+            senderAsset.modifyCoinValue(senderAssetId, receiverAssetId, coinName, "-" + amount);
+            receiverAsset.modifyCoinValue(senderAssetId, receiverAssetId, coinName, amount);
+
+            stub.putStringState(senderAssetId, objectMapper.writeValueAsString(senderAsset));
+            stub.putStringState(receiverAssetId, objectMapper.writeValueAsString(receiverAsset));
+
+            return objectMapper.writeValueAsString(
+                    TransferResponse.builder()
+                            .transactionId(stub.getTxId())
+                    .senderStudentId(senderAsset.getStudentId())
+                    .receiverStudentIdOrPhoneNumber(receiverAsset.getStudentId())
+                    .coinName(coinName)
+                    .amount(amount)
+                    .build());
+
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (CoinNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (NotEnoughCoinValueException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.out.println("NumberFormatException: " + e.getMessage());
+        }
+
+        return null;
+    }
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetHistoryForAssedId(final Context ctx, final String assetId) throws Exception {
-        ChaincodeStub stub = ctx.getStub();
+    public String GetHistoryForAssetId(final Context ctx, final String assetId) {
+        try {
+            if(!AssetExists(ctx, assetId)){
+                String errorMessage = String.format("Asset %s is does not exists", assetId);
+                throw new AssetNotFoundException(errorMessage);
+            }
 
-        Map<Long, String> response = new HashMap<>();
+            ChaincodeStub stub = ctx.getStub();
 
-        QueryResultsIterator<KeyModification> history = stub.getHistoryForKey(assetId);
-        if (history == null) {
-            String errorMessage = String.format("Product %s does not exist", assetId);
-            System.out.println(errorMessage);
-            throw new ChaincodeException(errorMessage, "Incorrect AssetId");
+            Map<Long, String> response = new HashMap<>();
+
+            QueryResultsIterator<KeyModification> history = stub.getHistoryForKey(assetId);
+            if (history == null) {
+                String errorMessage = String.format("Product %s does not exist", assetId);
+                System.out.println(errorMessage);
+                throw new ChaincodeException(errorMessage, "Incorrect AssetId");
+            }
+
+            long cnt = 1;
+            for (KeyModification keyModification : history) {
+                String value = "TIMESTAMP = " + keyModification.getTimestamp() + " TxId = " + keyModification.getTxId() + " Value = " + keyModification.getStringValue();
+                response.put(cnt++, value);
+            }
+            history.close();
+
+            return objectMapper.writeValueAsString(response);
+
+        } catch (AssetNotFoundException e){
+            System.out.println(e.getMessage());
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
+        } catch (Exception e){
+            System.out.println("QueryResultsIterator close Excepiton: " + e.getMessage());
         }
 
-        long cnt = 1;
-        for (KeyModification keyModification : history) {
-            String value = "TIMESTAMP = " + keyModification.getTimestamp() + " TxId = " + keyModification.getTxId() + " Value = " + keyModification.getStringValue();
-            response.put(cnt++, value);
+        return null;
+    }
+
+    /**
+     * methodName : DeleteCoin
+     * author : GB A
+     * description :
+     *
+     * @param ctx         the ctx
+     * @param delCoinName   the delcoinname
+     * @return null
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Asset DeleteCoin(final Context ctx, final String delCoinName) {
+
+        try {
+            ChaincodeStub stub = ctx.getStub();
+
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            for ( String coinName : rootAsset.getCoin().keySet()){
+                if (coinName.equals(delCoinName)){
+
+                    QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+
+                    for (KeyValue result: results) {
+                        Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
+                        asset.getCoin().remove(delCoinName);
+
+                        Asset asAsset = new Asset(asset.getAssetId(), asset.getStudentId(), asset.getOwner(), asset.getCoin() , asset.getSender() ,asset.getReceiver(), asset.getAmount());
+                        stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asAsset));
+                    }
+                    return null;
+                }
+            }
+            throw new ChaincodeException("Invalid CoinName");
+
+        } catch (JsonProcessingException e) {
+            System.out.println("Object to Json Exception: " + e.getMessage());
         }
-        history.close();
-
-        return genson.serialize(response);
+        return null;
     }
 
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String GetAssetState(final Context ctx, final String assetId) throws Exception {
-        ChaincodeStub stub = ctx.getStub();
-
-        byte[] state = stub.getState(assetId);
-        String response = new String(state, StandardCharsets.UTF_8);
-
-        return genson.serialize(response);
-    }
 }
