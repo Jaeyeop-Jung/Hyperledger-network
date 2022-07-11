@@ -337,7 +337,7 @@ public final class AssetTransfer implements ContractInterface {
      * @return 생성 여부
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public boolean CreateCoin(final Context ctx, final String coinName) {
+    public boolean CreateCoin(final Context ctx, final String coinName, final String coinValue) {
         try {
 
             if(CoinExists(ctx, coinName)){
@@ -347,8 +347,11 @@ public final class AssetTransfer implements ContractInterface {
 
             ChaincodeStub stub = ctx.getStub();
 
-            QueryResultsIterator<KeyValue> assetIter = stub.getStateByRange("", "");
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            rootAsset.createCoin(coinName, coinValue);
+            stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
 
+            QueryResultsIterator<KeyValue> assetIter = stub.getStateByRange("", "rootAsset");
             for (KeyValue keyValue : assetIter) {
                 Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
                 asset.createCoin(coinName);
@@ -410,16 +413,23 @@ public final class AssetTransfer implements ContractInterface {
             final String coinName,
             final String coinValue
     ) {
+        ChaincodeStub stub = ctx.getStub();
+
         try {
             if(!CoinExists(ctx, coinName)){
                 String errorMessage = String.format("Coin %s is does not exists", coinName);
                 throw new CoinNotFoundException(errorMessage);
             }
 
-            ChaincodeStub stub = ctx.getStub();
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            if (Integer.valueOf(rootAsset.getCoin().get(coinName)) < Integer.valueOf(coinValue)) {
+                String errorMessage = String.format("RootAsset %s has not enough coin", coinName);
+                throw new NotEnoughCoinValueException(errorMessage);
+            }
+            rootAsset.modifyCoinValue(null, null, coinName, "-" + coinValue);
+            stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
 
             QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "rootAsset");
-
             for (KeyValue keyValue : assetIdIter) {
                 Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
                 asset.modifyCoinValue(null, null, coinName, coinValue);
@@ -444,6 +454,7 @@ public final class AssetTransfer implements ContractInterface {
             final String coinValue
     ) {
         try {
+            ChaincodeStub stub = ctx.getStub();
 
             if(!AssetExists(ctx, assetId)){
                 String errorMessage = String.format("Asset %s is does not exists", assetId);
@@ -454,9 +465,13 @@ public final class AssetTransfer implements ContractInterface {
                 throw new CoinNotFoundException(errorMessage);
             }
 
-            ChaincodeStub stub = ctx.getStub();
-
-            AssetExists(ctx, assetId);
+            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
+            if (Integer.valueOf(rootAsset.getCoin().get(coinName)) < Integer.valueOf(coinValue)) {
+                String errorMessage = String.format("RootAsset %s has not enough coin", coinName);
+                throw new NotEnoughCoinValueException(errorMessage);
+            }
+            rootAsset.modifyCoinValue(null, null, coinName, coinValue);
+            stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
 
             Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
             asset.modifyCoinValue(null, null, coinName, coinValue);
@@ -518,7 +533,7 @@ public final class AssetTransfer implements ContractInterface {
 
             return objectMapper.writeValueAsString(
                     TransferResponse.builder()
-                            .transactionId(stub.getTxId())
+                    .transactionId(stub.getTxId())
                     .senderStudentId(senderAsset.getStudentId())
                     .receiverStudentIdOrPhoneNumber(receiverAsset.getStudentId())
                     .coinName(coinName)

@@ -220,7 +220,7 @@ public class AssetTransferTest {
         when(ctx.getStub()).thenReturn(stub);
         when(stub.getStringState("rootAsset"))
                 .thenReturn(objectMapper.writeValueAsString(Asset.of("rootAsset", "0", "test", new HashMap<>(), null, null, null)));
-        when(stub.getStateByRange("", "")).thenReturn(new QueryResultsIterator<KeyValue>() {
+        when(stub.getStateByRange("", "rootAsset")).thenReturn(new QueryResultsIterator<KeyValue>() {
             @Override
             public void close() throws Exception {
 
@@ -264,10 +264,10 @@ public class AssetTransferTest {
             }
         });
         //when
-        boolean response = contract.CreateCoin(ctx, "test");
+        boolean response = contract.CreateCoin(ctx, "test", "1000");
 
         //then
-        verify(stub).getStringState("rootAsset");
+        verify(stub, times(2)).getStringState("rootAsset");
         assertThat(response).isTrue();
 
     }

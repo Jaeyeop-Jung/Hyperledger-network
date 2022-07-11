@@ -72,6 +72,10 @@ public class Asset {
         coin.put(coinName, "0");
     }
 
+    public void createCoin(String coinName, String coinValue){
+        coin.put(coinName, coinValue);
+    }
+
     public void removeCoin(String coinName){
         coin.remove(coinName);
     }
