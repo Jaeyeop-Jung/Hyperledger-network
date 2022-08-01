@@ -5,7 +5,6 @@
 package org.hyperledger.fabric.samples.assettransfer;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import exception.*;
-import io.grpc.netty.shaded.io.netty.util.internal.StringUtil;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -58,7 +56,7 @@ public final class AssetTransfer implements ContractInterface {
     public void InitLedger(final Context ctx) throws JsonProcessingException {
 
         ChaincodeStub stub = ctx.getStub();
-        Asset asset = new Asset("rootAsset","0", "rootOwner",new HashMap<String ,String>(), null,null,null);
+        Asset asset = new Asset("rootAsset","0", "rootOwner",new HashMap<String ,String>(), null, null,null,null);
         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
 
     }
@@ -110,7 +108,8 @@ public final class AssetTransfer implements ContractInterface {
             final Context ctx,
             final String assetId,
             final String studentId,
-            final String owner
+            final String owner,
+            final String userRole
     )
     {
 
@@ -132,7 +131,7 @@ public final class AssetTransfer implements ContractInterface {
                 coin.put(key, "0");
             }
 
-            Asset asset = Asset.of(assetId, studentId, owner, coin, null, null, null);
+            Asset asset = Asset.of(assetId, studentId, owner, coin, userRole,null, null, null);
             String assetJSON = objectMapper.writeValueAsString(asset);
             stub.putStringState(assetId, assetJSON);
 
@@ -411,7 +410,8 @@ public final class AssetTransfer implements ContractInterface {
     public boolean UpdateAllAssetCoin(
             final Context ctx,
             final String coinName,
-            final String coinValue
+            final String coinValue,
+            final String userRole
     ) {
         ChaincodeStub stub = ctx.getStub();
 
@@ -421,19 +421,13 @@ public final class AssetTransfer implements ContractInterface {
                 throw new CoinNotFoundException(errorMessage);
             }
 
-            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
-            if (Integer.valueOf(rootAsset.getCoin().get(coinName)) < Integer.valueOf(coinValue)) {
-                String errorMessage = String.format("RootAsset %s has not enough coin", coinName);
-                throw new NotEnoughCoinValueException(errorMessage);
-            }
-            rootAsset.modifyCoinValue(null, null, coinName, "-" + coinValue);
-            stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
-
             QueryResultsIterator<KeyValue> assetIdIter = stub.getStateByRange("", "rootAsset");
             for (KeyValue keyValue : assetIdIter) {
                 Asset asset = objectMapper.readValue(keyValue.getStringValue(), Asset.class);
-                asset.modifyCoinValue(null, null, coinName, coinValue);
-                stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
+                if (asset.getUserRole().equals(userRole)){
+                    asset.modifyCoinValue(null, null, coinName, coinValue);
+                    stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
+                }
             }
 
             return true;
@@ -464,14 +458,6 @@ public final class AssetTransfer implements ContractInterface {
                 String errorMessage = String.format("Coin %s is does not exists", coinName);
                 throw new CoinNotFoundException(errorMessage);
             }
-
-            Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
-            if (Integer.valueOf(rootAsset.getCoin().get(coinName)) < Integer.valueOf(coinValue)) {
-                String errorMessage = String.format("RootAsset %s has not enough coin", coinName);
-                throw new NotEnoughCoinValueException(errorMessage);
-            }
-            rootAsset.modifyCoinValue(null, null, coinName, coinValue);
-            stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
 
             Asset asset = objectMapper.readValue(stub.getStringState(assetId), Asset.class);
             asset.modifyCoinValue(null, null, coinName, coinValue);
@@ -534,8 +520,8 @@ public final class AssetTransfer implements ContractInterface {
             return objectMapper.writeValueAsString(
                     TransferResponse.builder()
                     .transactionId(stub.getTxId())
-                    .senderStudentId(senderAsset.getStudentId())
-                    .receiverStudentIdOrPhoneNumber(receiverAsset.getStudentId())
+                    .senderIdentifier(senderAsset.getIdentifier())
+                    .receiverIdentifier(receiverAsset.getIdentifier())
                     .coinName(coinName)
                     .amount(amount)
                     .build());
@@ -619,7 +605,7 @@ public final class AssetTransfer implements ContractInterface {
                         Asset asset = objectMapper.readValue(result.getStringValue(), Asset.class);
                         asset.getCoin().remove(delCoinName);
 
-                        Asset asAsset = new Asset(asset.getAssetId(), asset.getStudentId(), asset.getOwner(), asset.getCoin() , asset.getSender() ,asset.getReceiver(), asset.getAmount());
+                        Asset asAsset = new Asset(asset.getAssetId(), asset.getIdentifier(), asset.getOwner(), asset.getCoin() , asset.getUserRole(), asset.getSender() ,asset.getReceiver(), asset.getAmount());
                         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asAsset));
                     }
                     return null;

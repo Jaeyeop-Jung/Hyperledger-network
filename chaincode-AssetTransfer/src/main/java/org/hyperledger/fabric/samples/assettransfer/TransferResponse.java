@@ -8,19 +8,19 @@ import lombok.*;
 public class TransferResponse {
 
     private String transactionId;
-    private String senderStudentId;
+    private String senderIdentifier;
 
-    private String receiverStudentIdOrPhoneNumber;
+    private String receiverIdentifier;
 
     private String coinName;
 
     private String amount;
 
     @Builder
-    public TransferResponse(String transactionId, String senderStudentId, String receiverStudentIdOrPhoneNumber, String coinName, String amount) {
+    public TransferResponse(String transactionId, String senderIdentifier, String receiverIdentifier, String coinName, String amount) {
         this.transactionId = transactionId;
-        this.senderStudentId = senderStudentId;
-        this.receiverStudentIdOrPhoneNumber = receiverStudentIdOrPhoneNumber;
+        this.senderIdentifier = senderIdentifier;
+        this.receiverIdentifier = receiverIdentifier;
         this.coinName = coinName;
         this.amount = amount;
     }

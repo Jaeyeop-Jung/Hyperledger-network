@@ -4,6 +4,8 @@ exception/NotEnoughCoinValueException.java
  exception.NotEnoughCoinValueException
 exception/AssetNotFoundException.java
  exception.AssetNotFoundException
+org/hyperledger/fabric/samples/assettransfer/UserRole.java
+ org.hyperledger.fabric.samples.assettransfer.UserRole
 org/hyperledger/fabric/samples/assettransfer/AssetTransfer.java
  org.hyperledger.fabric.samples.assettransfer.AssetTransfer
 org/hyperledger/fabric/samples/assettransfer/Asset.java

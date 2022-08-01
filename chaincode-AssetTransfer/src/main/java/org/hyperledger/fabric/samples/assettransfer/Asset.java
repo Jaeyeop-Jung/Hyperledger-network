@@ -8,7 +8,6 @@ import exception.NotEnoughCoinValueException;
 import lombok.*;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
-import org.hyperledger.fabric.shim.ChaincodeException;
 
 @DataType()
 @ToString
@@ -20,13 +19,16 @@ public class Asset {
     private String assetId;
 
     @Property()
-    private String studentId;
+    private String identifier;
 
     @Property()
     private String owner;
 
     @Property()
     private HashMap<String, String> coin;
+
+    @Property()
+    private String userRole;
 
     @Property()
     private String sender;
@@ -37,15 +39,16 @@ public class Asset {
     @Property()
     private String amount;
 
-    public static Asset of(final String assetId, final String studentId, final String owner, final HashMap<String, String> coin, final String sender, final String receiver, final String amount) {
-        return new Asset(assetId, studentId, owner, coin, sender, receiver, amount);
+    public static Asset of(final String assetId, final String studentId, final String owner, final HashMap<String, String> coin, final String userRole, final String sender, final String receiver, final String amount) {
+        return new Asset(assetId, studentId, owner, coin, userRole, sender, receiver, amount);
     }
 
-    public Asset(String assetId, String studentId, String owner, HashMap<String, String> coin, String sender, String receiver, String amount) {
+    public Asset(String assetId, String identifier, String owner, HashMap<String, String> coin, String userRole, String sender, String receiver, String amount) {
         this.assetId = assetId;
-        this.studentId = studentId;
+        this.identifier = identifier;
         this.owner = owner;
         this.coin = coin;
+        this.userRole = userRole;
         this.sender = sender;
         this.receiver = receiver;
         this.amount = amount;
