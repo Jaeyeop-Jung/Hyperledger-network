@@ -264,7 +264,7 @@ public class AssetTransferTest {
             }
         });
         //when
-        boolean response = contract.CreateCoin(ctx, "test", "1000");
+        boolean response = contract.CreateCoin(ctx, "test");
 
         //then
         verify(stub, times(2)).getStringState("rootAsset");

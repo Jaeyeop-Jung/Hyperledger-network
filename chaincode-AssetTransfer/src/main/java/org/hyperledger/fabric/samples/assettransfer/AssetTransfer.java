@@ -336,7 +336,7 @@ public final class AssetTransfer implements ContractInterface {
      * @return 생성 여부
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public boolean CreateCoin(final Context ctx, final String coinName, final String coinValue) {
+    public boolean CreateCoin(final Context ctx, final String coinName) {
         try {
 
             if(CoinExists(ctx, coinName)){
@@ -347,7 +347,7 @@ public final class AssetTransfer implements ContractInterface {
             ChaincodeStub stub = ctx.getStub();
 
             Asset rootAsset = objectMapper.readValue(stub.getStringState("rootAsset"), Asset.class);
-            rootAsset.createCoin(coinName, coinValue);
+            rootAsset.createCoin(coinName);
             stub.putStringState(rootAsset.getAssetId(), objectMapper.writeValueAsString(rootAsset));
 
             QueryResultsIterator<KeyValue> assetIter = stub.getStateByRange("", "rootAsset");
