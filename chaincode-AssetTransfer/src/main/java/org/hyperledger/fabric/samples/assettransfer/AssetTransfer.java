@@ -58,7 +58,7 @@ public final class AssetTransfer implements ContractInterface {
         ChaincodeStub stub = ctx.getStub();
         Asset asset = new Asset("rootAsset","0", "rootOwner",new HashMap<String ,String>(), null, null,null,null);
         stub.putStringState(asset.getAssetId(), objectMapper.writeValueAsString(asset));
-
+        System.out.println("InitLedger Success");
     }
 
     /**
